@@ -1,6 +1,20 @@
 # 优云智算部署准备
 
-目标为上海二 A、华北二 A 的容器实例。部署到专用目录，不修改其他项目的 ComfyUI 或 Python 环境。本次查询实例列表为 0。安装/启动脚本、完整 Worker 与 CPU/协议链路已在本机 WSL Ubuntu 22.04、Python 3.12.13 验收；尚未在云实例执行，不代表云端网络、公共模型挂载或 GPU 推理通过。
+优先上海二 A，华北二 A 后续验证。2026-09-26 已创建上海二 A RTX 5090 实例，完成真实部署、推理、素材传输、取消及 Server 重连验收。固定环境见 [comfy-runtime.json](comfy-runtime.json)，完整样本报告见 [Server 云端验收记录](https://github.com/woniu101/zhilume-server/blob/main/docs/cloud-acceptance-2026-09-26.md)。部署到专用目录，不修改其他项目的 ComfyUI 或 Python 环境。
+
+实测配置为 5090 32GB 显存、14 vCPU、48 GiB 内存、100 GiB 系统盘。64 GiB 规格虽然预检通过，实际创建时资源不足；48 GiB 在同一区域创建成功。库存与入口需要每次现场确认。
+
+## ComfyUI 运行基线
+
+基础镜像 `compshareImage-1vjzi0b9thpu` 中 ComfyUI 版本较旧，缺少 2.1 节点。须在专用目录升级至 `comfy-runtime.json` 的官方提交并安装该版本 requirements。国内 Python 源可能缺少新模板依赖，实际缺失时使用官方 PyPI 补齐；无需下载模型。Worker 依赖与 ComfyUI 的 Torch 环境分开。
+
+```bash
+export ZHILUME_COMFY_ROOT=/root/ComfyUI
+export ZHILUME_COMFY_PYTHON=/root/miniconda3/bin/python
+bash deploy/run-comfy.sh
+```
+
+脚本固定只监听本机、禁用自定义节点和 xFormers，采用 PyTorch attention。镜像默认 xFormers 的 mask/kernel 路径在 5090 上曾真实失败，不能只看 `/object_info` 就判定可推理。脚本只启动既有专用安装，不自动更新源码或下载权重。若镜像已有 ComfyUI 自启动，应先确认队列为空，再停止原进程并修改启动项，避免两个实例占用同一端口。
 
 ## 1. 安装独立 Worker
 
@@ -38,16 +52,16 @@ bash deploy/run.sh
 
 网络可达性由用户解决，本项目不实现或引导配置 SSH 隧道、组网、中继。不同可用区的实际访问入口仍需现场验证。
 
-## 5. GPU 阶段与镜像
+## 5. GPU 验收范围与镜像
 
-告知用户开始 GPU 验收后，才显式设置 `ZHILUME_ENABLE_IMAGE=1` 和 `ZHILUME_COMFY_CONFIG`。首先低分辨率验收 2512 文生图、2.1 文生图/编辑/多参考/RGBA，再测取消、OOM、断线恢复和耗时/显存。现有测试服务不能证明这些能力已经可用。
+显式设置 `ZHILUME_ENABLE_IMAGE=1` 和 `ZHILUME_COMFY_CONFIG` 才发布图片执行。上海二 A 已完成 2512 文生图、2.1 文生图/编辑/2 与 4 图参考/RGBA、取消、Server 离线 12 秒后原 attempt 归档，以及 Worker 重启后的重新接入。GPU OOM、驱动崩溃、长时断网及其他区域仍待验收。公开 profile 的 `validation: unverified` 不会因本次单个实例成功而全局改为已验证。
 
 镜像中只保存依赖、程序、工作流和软链接，不保存 `.state`、一次性凭证、用户输入/输出、日志或真实环境配置。必须用新实例分别验证两个区域的挂载和冷启动，验证通过后再制作/发布镜像。
 
 官方依据（2026-09-26 核对）：[公共模型库与软链接](https://compshare.cn/docs/operation/gpu/usepublicmodel)、[只读实例列表接口](https://compshare.cn/docs/gpus/instance/describecompshareinstance)。官方说明与示例同时出现 `/models` 和 `/model`，因此以实例真实文件为准。
 
 
-## 本机 Linux 验收
+## 本机 Linux 验收（此前阶段）
 
 协议 2.0 验收：Worker 15/15 测试通过（含真实 FFmpeg 截取/抽音轨、符号链接、鉴权及输入校验）；Server 全量 13/13，通过直接运行 `deploy/run.sh` 的接入、文本输出、身份文件 0600 权限、重启身份复用，以及 Server 不监听入站端口仍可执行和归档的专项。测试 ComfyUI 为模拟服务，没有启动真实 ComfyUI 或加载模型。并行重负载时曾出现短租约测试超时，打包结束后的专项和全量复测通过，未放宽断言或租约。
 

@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.5.0，配套 Studio 0.8.0 / Server 0.6.0，协议 2.0。提供 CPU 视频截取/抽音轨、模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器；真实 GPU 推理尚未验收。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.5.0，配套 Studio 0.8.0 / Server 0.6.0，协议 2.0。提供 CPU 视频截取/抽音轨、模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
 
 ## 启动与接入
 
@@ -48,12 +48,12 @@ uv run zhilume-preflight --comfy-url http://127.0.0.1:8188 --model-root /model -
 
 只读预检仅访问 `/object_info` 并扫描指定的模型挂载目录，不提交 prompt，不下载/加载模型。报告中的 `environmentComplete` 只代表必要文件/节点存在，`inferenceVerified` 和 `executable` 始终为 false。
 
-Qwen Image 2512 文生图与 2.1 文生图/指令编辑/多参考/RGBA 已有独立 API 工作流构建器。示例中的 4 张参考图、1536 像素上限是保守执行配置，不是已验收的 GPU 上限；不能用预检或测试服务代替推理验收。
+Qwen Image 2512 文生图与 2.1 文生图/指令编辑/多参考/RGBA 使用独立 API 工作流构建器。已验收 2512 的 1024×1024、50 步，2.1 的 1536×1536、25 步，以及 1024 参考分辨率下 4 张参考图。其他输入和尺寸组合仍需实测，不能把一个样本当作显存上限。
 
-优云智算目标区域：上海二 A（cn-sh2-01）、华北二 A（cn-wlcb-01）。开发包可以部署到已有实例；创建/启动 GPU 与真实生成前先告知用户。本轮没有申请或启动云实例。
+优云智算优先区域：上海二 A（cn-sh2-01），已实际部署；华北二 A（cn-wlcb-01）仍为后续目标。模型通过公共 `/model` 目录精确软链接，未下载或复制权重。
 
 
-## 可选 Qwen 执行器（真实 GPU 尚未验收）
+## 可选 Qwen 执行器
 
 默认不连接 ComfyUI、不发布图片执行能力。启用前，先告知用户将开始 GPU 试运行，并确认实例已准备好。
 
@@ -82,4 +82,4 @@ uv run zhilume-worker --comfy-config config/comfy.local.json --enable-image-exec
 - https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_qwen_image_2_1_image_edit.json
 - https://github.com/Comfy-Org/ComfyUI/blob/master/server.py
 
-本机 WSL Ubuntu 22.04 / Python 3.12 完整 CPU 与协议验收已通过，包含真实部署脚本注册及身份复用；云端网络、公共模型挂载与真实 GPU 推理仍待验收，见 [部署说明](deploy/README.md)。
+本机 WSL CPU/协议验收和上海二 A 云端 Worker 15/15 自动测试均已通过。云端网络、公共模型挂载及列出的真实 GPU 样本已验证；其他区域、镜像冷启动、长时故障恢复尚未覆盖，见 [部署说明](deploy/README.md)。

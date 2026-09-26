@@ -1,0 +1,21 @@
+{
+  "verifiedDate": "2026-09-26",
+  "comfyRepository": "https://github.com/Comfy-Org/ComfyUI.git",
+  "comfyCommit": "79be670e2d9be63e238785af307369d2b9039ed1",
+  "baseImage": "compshareImage-1vjzi0b9thpu",
+  "baseImageName": "ComfyUI基础镜像纯净版0.36.0-5090",
+  "region": "cn-sh2",
+  "zone": "cn-sh2-01",
+  "gpu": "NVIDIA GeForce RTX 5090",
+  "gpuMemoryMiB": 32607,
+  "cpu": 14,
+  "memoryGiB": 48,
+  "diskGiB": 100,
+  "modelRoot": "/model",
+  "comfyPython": "3.10.15",
+  "torch": "2.10.0+cu130",
+  "workerPython": "3.12.3",
+  "ffmpeg": "6.1.1",
+  "attention": "pytorch",
+  "customNodesRequired": []
+}
