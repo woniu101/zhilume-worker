@@ -1,8 +1,8 @@
 {
-  "version": "1.2.0",
+  "version": "2.0.0",
   "files": {
-    "worker-message.schema.json": "41cf708758212ffe5f70eff468928d4ab4bad03456e51eb476ab21c647f0b4d4",
-    "fixtures.json": "642a3ee4400677eb78f99602add1fdc9b8916e393c91f126ba70a78b967afe85",
+    "worker-message.schema.json": "db12bca1b44806892c229f30e15aca0357e3a12882dbea9f61afaa31293d7d5c",
+    "fixtures.json": "9e23fda30a80de1f078d782de96b185156cbec8dc8209a67eb30f3876c4eb11b",
     "operation-catalog.json": "e09fb2368578a441c88f3ec41451e58a375b5382f47ca37a94f041e39d3baffe"
   }
 }

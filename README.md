@@ -1,54 +1,46 @@
 # Zhilume Worker
 
-Python + asyncio 的主动连接执行端。当前 0.4.0，提供 CPU 视频截取/抽音轨、显式模拟能力，以及可选择启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。配套 Studio 0.7.0 / Server 0.5.0。本地假 ComfyUI 联调已通过；未执行真实 GPU 推理。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.5.0，配套 Studio 0.8.0 / Server 0.6.0，协议 2.0。提供 CPU 视频截取/抽音轨、模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器；真实 GPU 推理尚未验收。
 
-新增 [云端部署准备](deploy/README.md)：独立 Python 环境、明确模型清单、软链接规划/应用、只读服务检查和默认不启用图片执行的启动脚本。模型链接在本机 WSL Ubuntu 实测，不等于云平台或 GPU 验收。
+## 启动与接入
 
-## 本地运行
+需要 Python 3.11+ 和 uv；部署脚本使用独立 Python 3.12。
 
-需要 Python 3.11+ 和 uv。已在 Windows 的 Python 3.12.13 环境验证。
-
-```powershell
+```bash
 uv sync --frozen
-uv run zhilume-worker --server http://127.0.0.1:4310 --enrollment <一次性接入凭证> --name my-worker
+uv run zhilume-worker --state .state --show-token
+uv run zhilume-worker --host 127.0.0.1 --port 4320 --state .state --name my-worker
 ```
 
-接入凭证由 Server 管理台生成，10 分钟内有效且只能使用一次。也可通过 `ZHILUME_ENROLLMENT` 环境变量传入，避免留在命令历史中。随后启动不再需要接入凭证：
+第一条 Worker 命令只在本机显示接入密钥并退出，正常服务日志不输出密钥。在 Server 管理台填写从 Server 所在机器可访问的 Worker 地址和该密钥，然后测试并保存。Worker 不需要 Server 地址，所有网络请求均由 Server 发起；ComfyUI 仅在 Worker 内部访问。
 
-```powershell
-uv run zhilume-worker --server http://127.0.0.1:4310 --name my-worker
-```
+默认仅监听本机；如通过受保护的网络入口访问，可指定适当的监听地址。公网访问应使用 HTTPS/WSS。地址的可达性由用户解决，本项目不实现 SSH 隧道、组网、中继，不提供外部工具配置示例或下载入口。
 
-`--state` 默认 `.state`，保存独立 Worker 凭证和任务尝试目录。不同 Worker 必须用不同状态目录。换 Server 也应使用新的状态目录。不要将 `.state`、凭证或临时素材提交到 Git。
+`--state` 保存 workerId、接入密钥、Server 绑定和任务尝试目录。首次连接绑定一个 Server 身份；其他 Server 被拒绝。连接不同 Server 应停下当前 Worker，并使用独立的新状态目录启动，不复制已有身份文件。Server 也须保留数据目录内的 worker-connections.json，确保重启身份不变。不要把任何身份、密钥或用户素材放入镜像或 Git。
 
-`--delay 3` 设置模拟计算秒数，便于测试取消。CPU 媒体进度来自 FFmpeg 输出时间；模拟进度仅用于协议测试。
+## 执行与恢复
 
-## 运行约定
-
-- 只向 Server 发起 HTTP / WebSocket 连接，没有 FastAPI 监听端口。
-- 默认一次执行一个任务；按 attempt 隔离输入与输出目录。
-- 输入下载流式校验 SHA-256 和大小，输出流式上传。
-- 等待 Server 持久归档确认后才清理成功结果。
-- 心跳每 10 秒；租约到期停止本地任务；网络重连指数退避并带抖动。
-- 同进程断线可继续等待确认；进程重启不擅自重新执行旧任务，由 Server 标记中断后人工重试。
-- 暂存失败或取消文件暂时保留用于诊断，尚未实现按保留策略自动清理。
+- 默认单任务执行；每个 attempt 使用隔离目录；默认不开启 GPU。
+- Server 上传输入，Worker 按声明大小/SHA-256 校验后原子落盘；已完整上传的文件可复用，未完成传输从头重试。
+- Server 下载结果，校验并持久归档后发 commit_ack，Worker 才清理成功结果。
+- 心跳 10 秒、默认租约 90 秒；Server 负责退避重连，Worker 租约过期停止执行。断网不自动重提生成任务。
+- Worker 进程重启不自动重跑旧任务，由 Server 标记中断后手动重试。失败/取消临时文件暂时保留诊断，尚无自动保留策略清理。
+- 输入输出接口仅允许当前有效 attempt/lease，无法通过任务请求读取任意路径。
 
 ## 校验与打包
 
-```powershell
-uv run python -m unittest discover -s tests
+```bash
+uv run python -m unittest discover -s tests -v
 uv build
 ```
 
-输出 wheel 和源码包在 `dist/`，契约快照包含在包内。协议源由 Server 仓库管理，当前 schema 主要校验消息信封，业务输入和状态另由 Server 校验。
-
-远程主机将地址换为可访问的 HTTPS Server，不需要为 Worker 开放公网入站端口。当前仅有本机端到端证据，**尚未验证优云智算、AutoDL、Linux 或真实 GPU 推理**。
+wheel 与源码包在 dist/，包括协议快照；契约由 Server/contracts 导出。Linux 安装和模型链接见 [部署说明](deploy/README.md)。本地模拟 ComfyUI 不代表真实 GPU 验收。
 
 ## CPU 处理与云端准备
 
-先安装支持 libx264 / AAC / PCM 的 FFmpeg，加入 PATH，或设置 `ZHILUME_FFMPEG` 为可执行路径。Worker 在找不到 FFmpeg 时不会发布 CPU 媒体能力。Linux 可使用系统包管理器安装 FFmpeg；无需 GPU、CUDA、ComfyUI，也无需新增 FastAPI 服务。
+先安装支持 libx264 / AAC / PCM 的 FFmpeg，加入 PATH，或设置 `ZHILUME_FFMPEG` 为可执行路径。Worker 在找不到 FFmpeg 时不会发布 CPU 媒体能力。Linux 可使用系统包管理器安装 FFmpeg；无需 GPU、CUDA、ComfyUI，接入服务使用 FastAPI/Uvicorn。
 
-媒体任务按范围精确解码/编码，输出 MP4（H.264/AAC）或 WAV（PCM）。FFmpeg 为受管理子进程，任务取消或租约过期时停止；素材仍通过 Server 上传归档。
+媒体任务按范围精确解码/编码，输出 MP4（H.264/AAC）或 WAV（PCM）。FFmpeg 为受管理子进程，任务取消或租约过期时停止；输入由 Server 上传，输出由 Server 下载并归档。
 
 ```bash
 uv run zhilume-preflight --comfy-url http://127.0.0.1:8188 --model-root /model --model-root /models
@@ -71,7 +63,7 @@ Qwen Image 2512 文生图与 2.1 文生图/指令编辑/多参考/RGBA 已有独
 4. 显式启动：
 
 ```bash
-uv run zhilume-worker --server https://your-server --comfy-config config/comfy.local.json --enable-image-execution
+uv run zhilume-worker --comfy-config config/comfy.local.json --enable-image-execution
 ```
 
 `exclusive: true` 是部署约束。ComfyUI 必须支持客户端指定 UUID `prompt_id` 和带 `prompt_id` 的定向中断，参考 2026-09-26 官方接口；旧服务应先升级。上传参考图保留顺序，第一张确定编辑输出比例。工作流和加载器文件名由 Worker 管理，Studio 不传任意图或文件路径。

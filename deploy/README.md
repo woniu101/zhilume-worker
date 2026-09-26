@@ -18,29 +18,25 @@ uv run --frozen zhilume-prepare --manifest deploy/models.example.json --comfy-ro
 
 同名候选对应多个实际文件会报告歧义。需要针对实际目录修正清单，不能静默选择模型版本。软链接不会复制权重进镜像。
 
-## 3. 只读服务检查
-
-为 Worker 配置专用 ComfyUI，仅监听本机；禁止和其他创作界面共享队列。拷贝 `config/comfy.example.json` 为 `config/comfy.local.json`，只保留确实存在的配置。ComfyUI 本身需在 GPU 阶段明确启动，准备脚本不会启动它。
+## 3. 启动 Worker 接入服务
 
 ```bash
-uv run --frozen zhilume-prepare --server https://your-server.example --comfy-config config/comfy.local.json
-```
-
-仅 GET Server `/api/v1/system` 和 ComfyUI `/object_info`。检查协议、节点及配置文件名，不 POST `/prompt`，不加载权重。Server 能访问不代表 WebSocket 或素材回传验收；必须继续下面的接入测试。
-
-云端 Worker 需能主动连接用户的 Server HTTPS / WSS 地址；本地 `127.0.0.1:4310` 无法从云实例访问。通过用户已有公网入口或受控隧道暴露 Server，不把 ComfyUI 或 Worker 开到公网。禁止把 Server 管理凭证、平台 API 密钥写进镜像。
-
-## 4. 先跑协议和 CPU
-
-```bash
-export ZHILUME_SERVER=https://your-server.example
-export ZHILUME_WORKER_NAME=zhilume-sh2a
-read -rs -p '一次性接入凭证: ' ZHILUME_ENROLLMENT; echo
-export ZHILUME_ENROLLMENT
+export ZHILUME_HOST=127.0.0.1
+export ZHILUME_PORT=4320
+export ZHILUME_STATE=/root/zhilume-worker/.state
+uv run --frozen zhilume-worker --state "$ZHILUME_STATE" --show-token
 bash deploy/run.sh
 ```
 
-默认 `ZHILUME_ENABLE_IMAGE=0`。接入后在管理台确认心跳、能力、忙碌状态；从 Studio 执行文本回显、素材复制、CPU 截取/抽音轨，检查结果入库。断开再重连、取消、重启中断后手动重试分别验收。身份保存在 `.state`，不要重复注册或把它提交到仓库。
+把显示的密钥和从 Server 所在机器能访问的 Worker 地址填入 Server 管理台。Server 无需公网地址；不会向 Worker 提供任何回调地址。默认不开图片能力。监听地址按用户自行配置的网络入口选择；公网入口须保护为 HTTPS/WSS。密钥只保存在用户数据目录，不写进镜像或仓库。
+
+## 4. 只读检查与 CPU 验收
+
+`zhilume-prepare` 默认检查 Python/FFmpeg；提供 `--worker <地址>` 时从环境变量 ZHILUME_WORKER_TOKEN 读取密钥，只 GET /api/v1/system。提供 `--comfy-config config/comfy.local.json` 时只读检查内部 ComfyUI /object_info，不提交 prompt。
+
+接入后在管理台核对心跳、能力、忙碌状态；执行文本回显、素材复制、CPU 视频截取/抽音轨，并检查结果归档。断开再连、取消、Worker/Server 重启分别验收。每个 Worker 状态目录只绑定一个 Server；Server 保留 worker-connections.json 以复用稳定身份。
+
+网络可达性由用户解决，本项目不实现或引导配置 SSH 隧道、组网、中继。不同可用区的实际访问入口仍需现场验证。
 
 ## 5. GPU 阶段与镜像
 
@@ -53,6 +49,6 @@ bash deploy/run.sh
 
 ## 本机 Linux 验收
 
-2026-09-26：Worker 14/14 测试通过（含真实 FFmpeg 截取/抽音轨、符号链接）；Server 11/11 集成测试通过，另加部署启动脚本专项 1/1。专项直接运行 `deploy/run.sh`，验证注册、文本回传、身份文件 0600 权限，以及不传接入凭证的重启身份复用。测试 ComfyUI 为模拟服务，没有启动真实 ComfyUI 或加载模型。
+协议 2.0 验收：Worker 15/15 测试通过（含真实 FFmpeg 截取/抽音轨、符号链接、鉴权及输入校验）；Server 全量 13/13，通过直接运行 `deploy/run.sh` 的接入、文本输出、身份文件 0600 权限、重启身份复用，以及 Server 不监听入站端口仍可执行和归档的专项。测试 ComfyUI 为模拟服务，没有启动真实 ComfyUI 或加载模型。并行重负载时曾出现短租约测试超时，打包结束后的专项和全量复测通过，未放宽断言或租约。
 
 三端仓库同级放置后，在 Server 仓库执行 `bash scripts/accept-linux.sh` 可重跑。本轮安装环境与数据在本机 WSL 独立目录，不修改用户 Server 数据；未申请云端资源。

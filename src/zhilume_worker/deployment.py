@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import json
+import os
 import platform
 import sys
 from pathlib import Path
@@ -14,22 +15,22 @@ from .media import binary
 from .model_links import plan_links, apply_links
 
 
-async def check_services(server, config, transport=None):
-    result = {"serverChecked": bool(server), "comfyChecked": bool(config), "serverReachable": False, "comfyEnvironmentComplete": False, "inferenceVerified": False, "errors": []}
+async def check_services(worker, config, transport=None, credential=None):
+    result = {"workerChecked": bool(worker), "comfyChecked": bool(config), "workerReachable": False, "comfyEnvironmentComplete": False, "inferenceVerified": False, "errors": []}
     async with httpx.AsyncClient(timeout=20, transport=transport) as client:
-        if server:
+        if worker:
             try:
-                endpoint = urlsplit(server)
+                endpoint = urlsplit(worker)
                 if endpoint.scheme not in ("http", "https") or endpoint.username or endpoint.password or endpoint.query or endpoint.fragment:
-                    raise ValueError("Server 地址格式无效")
-                response = await client.get(server.rstrip("/") + "/api/v1/system")
+                    raise ValueError("Worker 地址格式无效")
+                response = await client.get(worker.rstrip("/") + "/api/v1/system", headers={"Authorization": "Bearer " + (credential or "")})
                 response.raise_for_status()
                 value = response.json()
-                if value.get("name") != "Zhilume Server" or value.get("protocolVersion") != "1.0":
-                    raise ValueError("Server 协议不匹配")
-                result["serverReachable"] = True
+                if value.get("name") != "Zhilume Worker" or value.get("protocolVersion") != "2.0":
+                    raise ValueError("Worker 协议不匹配")
+                result["workerReachable"] = True
             except Exception as error:
-                result["errors"].append("Server 检查失败：" + type(error).__name__)
+                result["errors"].append("Worker 检查失败：" + type(error).__name__)
         if config:
             try:
                 if config.get("exclusive") is not True:
@@ -50,7 +51,7 @@ def main():
     parser.add_argument("--model-root", type=Path, action="append")
     parser.add_argument("--comfy-root", type=Path)
     parser.add_argument("--apply-links", action="store_true")
-    parser.add_argument("--server")
+    parser.add_argument("--worker", help="可选 Worker 地址；密钥由 ZHILUME_WORKER_TOKEN 环境变量传入")
     parser.add_argument("--comfy-config", type=Path)
     args = parser.parse_args()
     if bool(args.manifest) != bool(args.comfy_root) or (args.apply_links and not args.manifest):
@@ -64,7 +65,7 @@ def main():
                 apply_links(links)
             result["linksReady"] = all(link["status"] in ("ready", "linked") for link in links)
         config = json.loads(args.comfy_config.read_text("utf-8")) if args.comfy_config else None
-        result.update(asyncio.run(check_services(args.server, config)))
+        result.update(asyncio.run(check_services(args.worker, config, credential=os.environ.get("ZHILUME_WORKER_TOKEN"))))
     except Exception as error:
         result["errors"] = [str(error) if isinstance(error, ValueError) else type(error).__name__]
     print(json.dumps(result, ensure_ascii=False, indent=2))

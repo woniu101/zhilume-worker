@@ -3,7 +3,7 @@ import hashlib
 import unittest
 from pathlib import Path
 import jsonschema
-from zhilume_worker.__main__ import VALIDATOR
+from zhilume_worker.worker import VALIDATOR
 
 
 class ContractTest(unittest.TestCase):

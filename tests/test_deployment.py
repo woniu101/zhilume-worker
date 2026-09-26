@@ -12,11 +12,11 @@ class DeploymentTests(unittest.TestCase):
         def handler(request):
             calls.append((request.method, request.url.path))
             if request.url.path == "/api/v1/system":
-                return httpx.Response(200, json={"name": "Zhilume Server", "protocolVersion": "1.0"})
+                return httpx.Response(200, json={"name": "Zhilume Worker", "protocolVersion": "2.0"})
             return httpx.Response(200, json={})
         transport = httpx.MockTransport(handler)
-        result = asyncio.run(check_services("https://server.invalid", {"exclusive": True, "url": "http://127.0.0.1:8188", "profiles": []}, transport))
-        self.assertTrue(result["serverReachable"])
+        result = asyncio.run(check_services("https://worker.invalid", {"exclusive": True, "url": "http://127.0.0.1:8188", "profiles": []}, transport))
+        self.assertTrue(result["workerReachable"])
         self.assertFalse(result["comfyEnvironmentComplete"])
         self.assertFalse(result["inferenceVerified"])
         self.assertTrue(result["errors"])
