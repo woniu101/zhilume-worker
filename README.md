@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.6.1，配套 Studio 0.10.0 / Server 0.7.1，协议 2.0。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.7.0，配套 Studio 0.11.0 / Server 0.8.0，协议 2.0。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
 
 ## 启动与接入
 
@@ -81,3 +81,22 @@ uv run zhilume-worker --comfy-config config/comfy.local.json --enable-image-exec
 - https://github.com/Comfy-Org/ComfyUI/blob/master/server.py
 
 本机 WSL CPU/协议验收和上海二 A 云端 Worker 15/15 自动测试均已通过。云端网络、公共模型挂载及列出的真实 GPU 样本已验证；其他区域、镜像冷启动、长时故障恢复尚未覆盖，见 [部署说明](deploy/README.md)。
+
+
+## 可选 IndexTTS 2.5 执行器（真实 GPU 待验收）
+
+Worker 的轻量依赖不安装 PyTorch。另建官方 IndexTTS Python 环境，固定提交 `ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c`，按其锁文件安装推理依赖。将 `config/indextts.example.json` 复制为本地配置，填写 Python、源码目录、模型目录、FFmpeg 的绝对路径。不要将模型路径或命令交给 Studio 指定。
+
+```bash
+uv run zhilume-worker --speech-config config/indextts.local.json --enable-speech-execution
+```
+
+部署启动器也支持 `ZHILUME_ENABLE_SPEECH=1` 和 `ZHILUME_SPEECH_CONFIG`。启用不会自动下载模型；主模型、tiktoken 词表、w2v-bert、BigVGAN、CAMPPlus 均须完整存在。需要文字情绪时额外准备 qwen0.6bemo4-merge，并设置 enableEmotionText=true。预检仅核对固定源码版本、配置与权重文件存在，不能证明 Python/CUDA 依赖、文件内容正确或推理成功。公共模型是否具备这些文件，须在实际上海二 A 实例核验后按准确路径软链接，当前不承诺零下载部署。
+
+每个任务启动独立受管 Python 进程：FFmpeg 截取/规范化参考，再调用官方 infer_v2_5.IndexTTS2，最后输出 24kHz 单声道 PCM16 WAV。语速映射 duration_factor=1/speed；跟随音色、情绪音频、情绪向量、文字情绪互斥。启动加载成本按真实阶段显示，不伪造百分比。结果归档后清理成功任务；失败日志保留于 attempts/<attemptId>/speech.log。取消和 15 分钟推理超时结束所持有子进程；Linux 另设父进程退出保护。生产 GPU 部署优先 Linux；Windows 仅完成普通取消测试，异常强杀整棵进程树仍需独立验收。
+
+共享 GPU 同时启用 ComfyUI 与 IndexTTS 时，Worker 单并发不等于显存已释放；ComfyUI 缓存可能占用显存。首次验收只启用语音执行器，随后再验证混合模型切换，不假设显存自动调度。普通视频截取和抽音轨仍不依赖本执行器。
+
+`tests/speech_worker.py` 与服务端 speech-integration 测试是 CPU 测试夹具：替代上游推理、保留真实通信/文件传输/FFmpeg/受管 runner，不能用于发布或推理质量验收。正式 wheel 不包含 tests。真实模型效果、情绪权重默认值、吞吐和 OOM 行为待通知用户后在上海二 A 验收。
+
+官方依据：[固定版推理接口](https://github.com/index-tts/index-tts/blob/ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c/indextts/infer_v2_5.py)、[词表加载](https://github.com/index-tts/index-tts/blob/ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c/indextts/utils/tokenizer.py)。

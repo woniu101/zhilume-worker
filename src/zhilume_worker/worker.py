@@ -10,6 +10,7 @@ from pathlib import Path
 import jsonschema
 
 from .comfy import ComfyExecutor
+from .speech import SpeechExecutor
 
 LOG = logging.getLogger("zhilume.worker")
 CAPABILITIES = ["mock.text.echo.v1", "mock.media.copy.v1"]
@@ -21,6 +22,7 @@ class Worker:
     def __init__(self, args):
         self.args = args
         self.comfy = ComfyExecutor.from_file(args.comfy_config) if getattr(args, "enable_image_execution", False) else None
+        self.speech = SpeechExecutor.from_file(args.speech_config) if getattr(args, "enable_speech_execution", False) else None
         self.capabilities = list(CAPABILITIES)
         self.root = Path(args.state).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
@@ -58,10 +60,10 @@ class Worker:
                 filename = source["asset"]["filename"]
                 output = directory / ("output" + Path(filename).suffix)
                 await self.download(job, source["asset"], output)
-            elif operation.startswith("image.") and self.comfy:
+            elif (operation.startswith("image.") and self.comfy) or (operation == "audio.speech.v1" and self.speech):
                 references = source["referenceAssets"]
                 if [a["id"] for a in references] != source["referenceAssetIds"]:
-                    raise ValueError("参考图顺序不一致")
+                    raise ValueError("参考素材顺序不一致")
                 paths = []
                 for i, asset in enumerate(references):
                     path = directory / (f"reference_{i}" + Path(asset["filename"]).suffix)
@@ -72,7 +74,10 @@ class Worker:
                     nonlocal sequence
                     sequence += 1
                     await self.send("task.progress", {"progress": None, "stage": stage}, job, sequence=sequence)
-                output, filename = await self.comfy.process(operation, source, paths, directory, image_progress, job["attemptId"])
+                if operation == "audio.speech.v1":
+                    output, filename = await self.speech.process(operation, source, paths, directory, image_progress)
+                else:
+                    output, filename = await self.comfy.process(operation, source, paths, directory, image_progress, job["attemptId"])
             else:
                 raise ValueError("不支持的能力")
             if operation in CAPABILITIES:
@@ -124,8 +129,9 @@ class Worker:
 
     async def hello(self):
         image_profiles = self.comfy.public_profiles if self.comfy else []
-        capabilities = self.capabilities + sorted({op for p in image_profiles for op in p["operations"]})
-        await self.send("hello", {"workerId": self.worker_id, "capabilities": capabilities, "imageProfiles": image_profiles, "activeAttempts": list(self.active)})
+        speech_profiles = self.speech.public_profiles if self.speech else []
+        capabilities = (["audio.speech.v1"] if speech_profiles else []) + self.capabilities + sorted({op for p in image_profiles for op in p["operations"]})
+        await self.send("hello", {"workerId": self.worker_id, "capabilities": capabilities, "imageProfiles": image_profiles, "speechProfiles": speech_profiles, "activeAttempts": list(self.active)})
         for state in list(self.active.values()):
             if not state["inputs_ready"].is_set():
                 await self.send("task.accepted", job=state["job"])
@@ -190,6 +196,8 @@ class Worker:
             LOG.warning("Server 协议提示: %s", message["payload"].get("code"))
 
     async def start(self):
+        if self.speech:
+            await self.speech.check()
         if self.comfy:
             await self.comfy.check()
             await self.comfy.recover(self.root)

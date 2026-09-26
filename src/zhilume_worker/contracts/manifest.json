@@ -3,6 +3,6 @@
   "files": {
     "worker-message.schema.json": "db12bca1b44806892c229f30e15aca0357e3a12882dbea9f61afaa31293d7d5c",
     "fixtures.json": "9e23fda30a80de1f078d782de96b185156cbec8dc8209a67eb30f3876c4eb11b",
-    "operation-catalog.json": "d35489e6db54e7b7c69fc547861924ccf0631fe1f7429dc23f1bbf19d3eb190e"
+    "operation-catalog.json": "f540df2bb79e13da1c6ff44ae03863c6f2940474cdabe8364ef5045f64a20d78"
   }
 }

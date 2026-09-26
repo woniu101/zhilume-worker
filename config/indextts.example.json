@@ -1,0 +1,8 @@
+{
+  "python": "/opt/index-tts/.venv/bin/python",
+  "repository": "/opt/index-tts",
+  "modelDirectory": "/opt/index-tts/checkpoints",
+  "ffmpeg": "/usr/bin/ffmpeg",
+  "maxTextCharacters": 1000,
+  "enableEmotionText": false
+}

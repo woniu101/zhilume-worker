@@ -19,7 +19,11 @@ def main():
     parser.add_argument("--upload-limit", type=int, default=1024 ** 3)
     parser.add_argument("--comfy-config")
     parser.add_argument("--enable-image-execution", action="store_true")
+    parser.add_argument("--speech-config")
+    parser.add_argument("--enable-speech-execution", action="store_true")
     args = parser.parse_args()
+    if args.enable_speech_execution and not args.speech_config:
+        parser.error("启用语音执行需要 --speech-config")
     if args.enable_image_execution and not args.comfy_config:
         parser.error("启用图片执行需要 --comfy-config")
     if args.delay < 0 or not 0 <= args.port <= 65535 or args.upload_limit <= 0:

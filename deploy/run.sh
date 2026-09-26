@@ -7,4 +7,8 @@ if [[ "${ZHILUME_ENABLE_IMAGE:-0}" == '1' ]]; then
   : "${ZHILUME_COMFY_CONFIG:?图片执行必须指定专用 ComfyUI 配置}"
   args+=(--enable-image-execution --comfy-config "$ZHILUME_COMFY_CONFIG")
 fi
+if [[ "${ZHILUME_ENABLE_SPEECH:-0}" == '1' ]]; then
+  : "${ZHILUME_SPEECH_CONFIG:?语音执行必须指定 IndexTTS 配置}"
+  args+=(--enable-speech-execution --speech-config "$ZHILUME_SPEECH_CONFIG")
+fi
 exec uv run --frozen --no-sync zhilume-worker "${args[@]}"

@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
+  "version": "1.5.0",
   "media": [
     {
       "id": "media.video.trim.v1",
@@ -184,6 +184,62 @@
       ],
       "outputKind": "image",
       "version": "1.0"
+    }
+  ],
+  "speechOperations": [
+    {
+      "id": "audio.speech.v1",
+      "name": "语音合成",
+      "resource": "gpu",
+      "simulation": false,
+      "inputKinds": [
+        "text",
+        "audio"
+      ],
+      "outputKind": "audio",
+      "version": "1.0"
+    }
+  ],
+  "speechModels": [
+    {
+      "id": "indextts-2.5",
+      "name": "IndexTTS 2.5",
+      "operations": [
+        "audio.speech.v1"
+      ],
+      "workflowRevision": "indextts25-v1",
+      "upstreamRevision": "ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c",
+      "languages": [
+        "ZH",
+        "EN",
+        "JA",
+        "ES",
+        "AR"
+      ],
+      "emotionModes": [
+        "follow",
+        "reference",
+        "vector",
+        "text"
+      ],
+      "emotionLabels": [
+        "高兴",
+        "愤怒",
+        "悲伤",
+        "害怕",
+        "厌恶",
+        "低落",
+        "惊讶",
+        "平静"
+      ],
+      "minSpeed": 0.5,
+      "maxSpeed": 2,
+      "maxTextCharacters": 1000,
+      "maxReferenceSeconds": 30,
+      "formats": [
+        "wav"
+      ],
+      "status": "awaiting_gpu_validation"
     }
   ]
 }
