@@ -5,3 +5,5 @@ __pycache__/
 *.log
 .env
 dist/
+
+config/*.local.json

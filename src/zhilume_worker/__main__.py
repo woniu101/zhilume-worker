@@ -16,6 +16,7 @@ import jsonschema
 from websockets.asyncio.client import connect
 
 from . import media
+from .comfy import ComfyExecutor
 
 LOG = logging.getLogger("zhilume.worker")
 CAPABILITIES = ["mock.text.echo.v1", "mock.media.copy.v1"]
@@ -26,6 +27,7 @@ VALIDATOR = jsonschema.Draft7Validator(SCHEMA)
 class Worker:
     def __init__(self, args):
         self.args = args
+        self.comfy = ComfyExecutor.from_file(args.comfy_config) if getattr(args, "enable_image_execution", False) else None
         self.capabilities = CAPABILITIES + (list(media.OPERATIONS) if media.binary() else [])
         self.root = Path(args.state).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
@@ -84,19 +86,22 @@ class Worker:
             elif operation == CAPABILITIES[1] or operation in media.OPERATIONS:
                 filename = source["asset"]["filename"]
                 output = directory / ("output" + Path(filename).suffix)
-                digest = hashlib.sha256()
-                size = 0
-                async with self.http.stream("GET", f'/api/v1/worker/jobs/{job["jobId"]}/input', headers=self.headers(job)) as response:
-                    response.raise_for_status()
-                    with output.open("wb") as file:
-                        async for chunk in response.aiter_bytes():
-                            size += len(chunk)
-                            if size > source["asset"]["size"]:
-                                raise ValueError("输入素材长度超出声明")
-                            digest.update(chunk)
-                            file.write(chunk)
-                if digest.hexdigest() != source["asset"]["sha256"] or size != source["asset"]["size"]:
-                    raise ValueError("输入素材校验失败")
+                await self.download(job, source["asset"], output)
+            elif operation.startswith("image.") and self.comfy:
+                references = source["referenceAssets"]
+                if [a["id"] for a in references] != source["referenceAssetIds"]:
+                    raise ValueError("参考图顺序不一致")
+                paths = []
+                for i, asset in enumerate(references):
+                    path = directory / (f"reference_{i}" + Path(asset["filename"]).suffix)
+                    await self.download(job, asset, path)
+                    paths.append(path)
+                sequence = 0
+                async def image_progress(stage):
+                    nonlocal sequence
+                    sequence += 1
+                    await self.send("task.progress", {"progress": None, "stage": stage}, job, sequence=sequence)
+                output, filename = await self.comfy.process(operation, source, paths, directory, image_progress, job["attemptId"])
             else:
                 raise ValueError("不支持的能力")
             if operation in media.OPERATIONS:
@@ -106,7 +111,7 @@ class Worker:
                     sequence += 1
                     await self.send("task.progress", {"progress": value, "stage": "CPU 媒体处理"}, job, sequence=sequence)
                 output, filename = await media.process(operation, output, directory, source, progress)
-            else:
+            elif operation in CAPABILITIES:
                 for step in range(1, 6):
                     await asyncio.sleep(self.args.delay / 5)
                     await self.send("task.progress", {"progress": step / 6, "stage": "模拟执行（不调用模型）"}, job, sequence=step)
@@ -138,6 +143,34 @@ class Worker:
             await self.send("task.failed", {"message": str(error) if isinstance(error, ValueError) else "执行失败，请检查网络、编码和本地磁盘"}, job)
         finally:
             self.active.pop(job["attemptId"], None)
+            if self.comfy and self.comfy.poisoned:
+                await self.hello()
+
+    async def download(self, job, asset, output):
+        digest = hashlib.sha256()
+        size = 0
+        async with self.http.stream("GET", f'/api/v1/worker/jobs/{job["jobId"]}/inputs/{asset["id"]}', headers=self.headers(job)) as response:
+            response.raise_for_status()
+            with output.open("wb") as file:
+                async for chunk in response.aiter_bytes():
+                    size += len(chunk)
+                    if size > asset["size"]:
+                        raise ValueError("输入素材长度超出声明")
+                    digest.update(chunk)
+                    file.write(chunk)
+        if digest.hexdigest() != asset["sha256"] or size != asset["size"]:
+            raise ValueError("输入素材校验失败")
+
+    async def hello(self):
+        image_profiles = self.comfy.public_profiles if self.comfy else []
+        capabilities = self.capabilities + sorted({op for p in image_profiles for op in p["operations"]})
+        await self.send("hello", {"capabilities": capabilities, "imageProfiles": image_profiles, "activeAttempts": list(self.active)})
+
+    @staticmethod
+    def cancel(state):
+        if not state.get("cancelling"):
+            state["cancelling"] = True
+            state["task"].cancel()
 
     async def maintenance(self):
         heartbeat_at = 0
@@ -148,7 +181,7 @@ class Worker:
                 heartbeat_at = current + 10
             for state in list(self.active.values()):
                 if current > state["deadline"]:
-                    state["task"].cancel()
+                    self.cancel(state)
             await asyncio.sleep(1)
 
     async def handle(self, message):
@@ -166,7 +199,7 @@ class Worker:
         elif kind == "lease.renewed" and state:
             state["deadline"] = time.monotonic() + message["payload"]["leaseSeconds"]
         elif kind == "task.cancel" and state:
-            state["task"].cancel()
+            self.cancel(state)
         elif kind == "task.commit_ack" and state:
             state["committed"].set()
             self.active.pop(attempt, None)
@@ -174,6 +207,9 @@ class Worker:
             LOG.warning("Server 协议提示: %s", message["payload"].get("code"))
 
     async def run(self):
+        if self.comfy:
+            await self.comfy.check()
+            await self.comfy.recover(self.root)
         await self.register()
         maintenance = asyncio.create_task(self.maintenance())
         url = self.args.server.rstrip("/").replace("https://", "wss://").replace("http://", "ws://") + "/api/v1/worker/connect"
@@ -183,8 +219,8 @@ class Worker:
                 try:
                     async with connect(url, additional_headers={"Authorization": self.http.headers["Authorization"]}, max_size=256 * 1024) as socket:
                         self.socket = socket
-                        await self.send("hello", {"capabilities": self.capabilities, "activeAttempts": list(self.active)})
-                        LOG.info("已连接 Server（CPU 媒体与模拟能力，无 GPU 执行）")
+                        await self.hello()
+                        LOG.info("已连接 Server；图片执行%s", "已显式启用，尚未 GPU 验收" if self.comfy else "未启用")
                         backoff = 1
                         async for raw in socket:
                             await self.handle(json.loads(raw))
@@ -199,20 +235,26 @@ class Worker:
         finally:
             maintenance.cancel()
             tasks = [state["task"] for state in list(self.active.values())]
-            for task in tasks:
-                task.cancel()
+            for state in list(self.active.values()):
+                self.cancel(state)
             await asyncio.gather(maintenance, *tasks, return_exceptions=True)
             await self.http.aclose()
+            if self.comfy:
+                await self.comfy.http.aclose()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Zhilume Worker：CPU 媒体处理与模拟能力")
+    parser = argparse.ArgumentParser(description="Zhilume Worker：CPU 媒体处理与可选 ComfyUI 图片执行")
     parser.add_argument("--server", default="http://127.0.0.1:4310")
     parser.add_argument("--enrollment")
     parser.add_argument("--name", default=platform.node())
     parser.add_argument("--state", default=".state")
     parser.add_argument("--delay", type=float, default=3, help="模拟计算秒数")
+    parser.add_argument("--comfy-config", help="专用 ComfyUI 配置 JSON")
+    parser.add_argument("--enable-image-execution", action="store_true", help="显式允许提交 GPU 图片任务")
     args = parser.parse_args()
+    if args.enable_image_execution and not args.comfy_config:
+        parser.error("启用图片执行需要 --comfy-config")
     if args.delay < 0 or not args.server.startswith(("http://", "https://")):
         parser.error("Server 地址或 delay 不合法")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

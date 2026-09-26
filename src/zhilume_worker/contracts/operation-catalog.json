@@ -1,17 +1,177 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "media": [
-    { "id": "media.video.trim.v1", "name": "视频截取", "simulation": false, "inputKinds": ["video"], "outputKind": "video", "resource": "cpu", "version": "1.0", "parameters": { "start": { "type": "number", "minimum": 0 }, "end": { "type": "number", "maximum": 86400 } }, "output": { "container": "mp4", "videoCodec": "h264", "audioCodec": "aac" } },
-    { "id": "media.audio.extract.v1", "name": "提取音轨", "simulation": false, "inputKinds": ["video"], "outputKind": "audio", "resource": "cpu", "version": "1.0", "parameters": { "start": { "type": "number", "minimum": 0 }, "end": { "type": "number", "maximum": 86400 } }, "output": { "container": "wav", "audioCodec": "pcm_s16le" } }
+    {
+      "id": "media.video.trim.v1",
+      "name": "视频截取",
+      "simulation": false,
+      "inputKinds": [
+        "video"
+      ],
+      "outputKind": "video",
+      "resource": "cpu",
+      "version": "1.0",
+      "parameters": {
+        "start": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end": {
+          "type": "number",
+          "maximum": 86400
+        }
+      },
+      "output": {
+        "container": "mp4",
+        "videoCodec": "h264",
+        "audioCodec": "aac"
+      }
+    },
+    {
+      "id": "media.audio.extract.v1",
+      "name": "提取音轨",
+      "simulation": false,
+      "inputKinds": [
+        "video"
+      ],
+      "outputKind": "audio",
+      "resource": "cpu",
+      "version": "1.0",
+      "parameters": {
+        "start": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end": {
+          "type": "number",
+          "maximum": 86400
+        }
+      },
+      "output": {
+        "container": "wav",
+        "audioCodec": "pcm_s16le"
+      }
+    }
   ],
   "imageModels": [
-    { "id": "qwen-image-2512", "name": "Qwen Image 2512", "operations": ["image.generate"], "status": "awaiting_gpu_validation", "referenceLimits": null, "formats": ["png"], "repository": "Comfy-Org/Qwen-Image_ComfyUI", "requiredNodes": ["UNETLoader", "CLIPLoader", "VAELoader", "KSampler", "SaveImage"], "modelPatterns": { "diffusion_models": "*qwen_image_2512*", "text_encoders": "*qwen*vl*", "vae": "*qwen*vae*" } },
-    { "id": "qwen-image-2.1", "name": "Qwen Image 2.1", "operations": ["image.generate", "image.edit", "image.reference"], "status": "awaiting_gpu_validation", "referenceLimits": null, "formats": ["png", "rgba"], "repository": "Comfy-Org/Qwen-Image-2.1", "requiredNodes": ["UNETLoader", "CLIPLoader", "VAELoader", "TextEncodeQwenImage21", "SaveImage"], "modelPatterns": { "diffusion_models": "qwen_image_2.1*", "text_encoders": "qwen3vl_8b*", "vae": "qwen_image_2.1_vae*" } }
+    {
+      "id": "qwen-image-2512",
+      "name": "Qwen Image 2512",
+      "operations": [
+        "image.generate.v1"
+      ],
+      "status": "awaiting_gpu_validation",
+      "referenceLimits": null,
+      "formats": [
+        "png"
+      ],
+      "repository": "Comfy-Org/Qwen-Image_ComfyUI",
+      "requiredNodes": [
+        "UNETLoader",
+        "CLIPLoader",
+        "VAELoader",
+        "KSampler",
+        "SaveImage",
+        "LoadImage",
+        "VAEDecode",
+        "CLIPTextEncode",
+        "ModelSamplingAuraFlow",
+        "EmptySD3LatentImage"
+      ],
+      "modelPatterns": {
+        "diffusion_models": "*qwen_image_2512*",
+        "text_encoders": "qwen_2.5_vl_7b*",
+        "vae": "qwen_image_vae*"
+      },
+      "workflowRevision": "qwen2512-v1"
+    },
+    {
+      "id": "qwen-image-2.1",
+      "name": "Qwen Image 2.1",
+      "operations": [
+        "image.generate.v1",
+        "image.edit.v1",
+        "image.reference.v1"
+      ],
+      "status": "awaiting_gpu_validation",
+      "referenceLimits": null,
+      "formats": [
+        "png",
+        "rgba"
+      ],
+      "repository": "Comfy-Org/Qwen-Image-2.1",
+      "requiredNodes": [
+        "UNETLoader",
+        "CLIPLoader",
+        "VAELoader",
+        "TextEncodeQwenImage21",
+        "SaveImage",
+        "LoadImage",
+        "VAEDecode",
+        "KSampler",
+        "EmptyLatentImage"
+      ],
+      "modelPatterns": {
+        "diffusion_models": "qwen_image_2.1*",
+        "text_encoders": "qwen3vl_8b*",
+        "vae": "qwen_image_2.1_vae*"
+      },
+      "workflowRevision": "qwen21-v1"
+    }
   ],
   "generationRequest": {
-    "description": "Planned adapter input, not an executable capability until GPU acceptance. The verified worker must publish workflow revision, reference limits and supported sizes before registration.",
-    "fields": ["modelId", "operation", "prompt", "referenceAssetIds", "width", "height", "seed", "outputFormat"],
-    "referenceOrder": "Reference order is significant and must survive model changes.",
-    "unsupportedParameters": "Reject incompatible references and output formats; never silently discard them."
-  }
+    "fields": [
+      "modelId",
+      "profileId",
+      "workflowRevision",
+      "prompt",
+      "negativePrompt",
+      "referenceAssetIds",
+      "width",
+      "height",
+      "steps",
+      "seed",
+      "outputFormat"
+    ],
+    "referenceOrder": "Order is significant; edit requires 1 image, reference requires at least 2. Preserve inputs when switching models.",
+    "sizeRule": "Text to image uses width/height; editing and references use first reference aspect ratio at the worker referenceResolution.",
+    "readiness": "A worker must explicitly enable image execution and pass read-only node/model checks. Environment readiness is not inference acceptance."
+  },
+  "imageOperations": [
+    {
+      "id": "image.generate.v1",
+      "name": "文生图",
+      "resource": "gpu",
+      "simulation": false,
+      "inputKinds": [
+        "text"
+      ],
+      "outputKind": "image",
+      "version": "1.0"
+    },
+    {
+      "id": "image.edit.v1",
+      "name": "图片指令编辑",
+      "resource": "gpu",
+      "simulation": false,
+      "inputKinds": [
+        "image",
+        "text"
+      ],
+      "outputKind": "image",
+      "version": "1.0"
+    },
+    {
+      "id": "image.reference.v1",
+      "name": "多图参考",
+      "resource": "gpu",
+      "simulation": false,
+      "inputKinds": [
+        "image",
+        "text"
+      ],
+      "outputKind": "image",
+      "version": "1.0"
+    }
+  ]
 }

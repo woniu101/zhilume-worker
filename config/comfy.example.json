@@ -1,0 +1,29 @@
+{
+  "url": "http://127.0.0.1:8188",
+  "exclusive": true,
+  "timeoutSeconds": 1800,
+  "profiles": [
+    {
+      "modelId": "qwen-image-2512",
+      "models": {
+        "diffusion": "qwen_image_2512_fp8_e4m3fn.safetensors",
+        "clip": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "vae": "qwen_image_vae.safetensors"
+      },
+      "maxSize": 1536,
+      "defaultSteps": 50
+    },
+    {
+      "modelId": "qwen-image-2.1",
+      "models": {
+        "diffusion": "qwen_image_2.1_int8_convrot.safetensors",
+        "clip": "qwen3vl_8b_int8_convrot.safetensors",
+        "vae": "qwen_image_2.1_vae_bf16.safetensors"
+      },
+      "maxReferences": 4,
+      "maxSize": 1536,
+      "referenceResolution": 1024,
+      "defaultSteps": 25
+    }
+  ]
+}

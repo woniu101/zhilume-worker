@@ -35,8 +35,8 @@ class MediaTest(unittest.IsolatedAsyncioTestCase):
 
     def test_model_profiles_are_not_executable_and_2512_has_no_edit(self):
         profiles = CATALOG['imageModels']
-        self.assertEqual(profiles[0]['operations'], ['image.generate'])
-        self.assertIn('image.reference', profiles[1]['operations'])
+        self.assertEqual(profiles[0]['operations'], ['image.generate.v1'])
+        self.assertIn('image.reference.v1', profiles[1]['operations'])
         with tempfile.TemporaryDirectory() as root:
             result = inspect_models([Path(root)], profiles[1])
             self.assertFalse(any(result.values()))
