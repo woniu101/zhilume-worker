@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.6.0，配套 Studio 0.9.0 / Server 0.7.0，协议 2.0。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.6.1，配套 Studio 0.10.0 / Server 0.7.1，协议 2.0。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
 
 ## 启动与接入
 

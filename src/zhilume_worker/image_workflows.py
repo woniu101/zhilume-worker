@@ -26,7 +26,7 @@ def profiles(config):
         maximum = entry.get("maxSize", 1536)
         resolution = entry.get("referenceResolution", 1024)
         steps = entry.get("defaultSteps", 25 if model["id"] == "qwen-image-2.1" else 50)
-        if type(refs) is not int or not 0 <= refs <= 16 or (model["id"] == "qwen-image-2512" and refs != 0):
+        if type(refs) is not int or not 0 <= refs <= model["referenceLimits"]["maximum"] or (model["id"] == "qwen-image-2512" and refs != 0):
             raise ValueError("参考图数量配置无效")
         if any(type(n) is not int or not 256 <= n <= 2048 or n % 32 for n in (maximum, resolution)) or maximum < 512:
             raise ValueError("执行尺寸应为 32 的倍数，最大不超过 2048")

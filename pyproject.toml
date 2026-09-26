@@ -1,6 +1,6 @@
 [project]
 name = "zhilume-worker"
-version = "0.6.0"
+version = "0.6.1"
 description = "Authenticated execution worker for Zhilume"
 requires-python = ">=3.11"
 dependencies = [

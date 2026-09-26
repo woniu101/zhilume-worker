@@ -29,6 +29,14 @@ def request(profile, refs=None, **overrides):
 
 
 class ImagesTest(unittest.IsolatedAsyncioTestCase):
+    def test_reference_cap_cannot_exceed_model_contract(self):
+        config = json.loads(json.dumps(CONFIG))
+        config["profiles"][1]["maxReferences"] = 10
+        self.assertEqual(profiles(config)[1]["public"]["maxReferences"], 10)
+        config["profiles"][1]["maxReferences"] = 11
+        with self.assertRaises(ValueError):
+            profiles(config)
+
     def test_graphs_have_distinct_encoders_and_preserve_reference_order(self):
         old, new = profiles(CONFIG)
         first = build_graph(old, "image.generate.v1", request(old), [], "test")
