@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#", "$id": "https://zhilume.local/contracts/worker-message/1.0",
+  "title": "WorkerMessage", "type": "object", "additionalProperties": false,
+  "required": ["protocolVersion", "messageId", "type", "payload"],
+  "properties": {
+    "protocolVersion": {"const":"1.0"}, "messageId":{"type":"string","minLength":1,"maxLength":100},
+    "type":{"enum":["hello","heartbeat","welcome","task.assign","task.accepted","task.progress","task.result_ready","task.failed","task.cancelled","task.cancel","task.commit_ack","lease.renewed","drain","error"]},
+    "jobId":{"type":"string","maxLength":100},"attemptId":{"type":"string","maxLength":100},"leaseId":{"type":"string","maxLength":100},
+    "sequence":{"type":"integer","minimum":0},"payload":{"type":"object"}
+  },
+  "allOf":[{"if":{"properties":{"type":{"pattern":"^task\\."}}},"then":{"required":["jobId","attemptId","leaseId"]}}]
+}

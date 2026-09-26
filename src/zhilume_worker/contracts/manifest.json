@@ -1,0 +1,8 @@
+{
+  "version": "1.1.0",
+  "files": {
+    "worker-message.schema.json": "41cf708758212ffe5f70eff468928d4ab4bad03456e51eb476ab21c647f0b4d4",
+    "fixtures.json": "642a3ee4400677eb78f99602add1fdc9b8916e393c91f126ba70a78b967afe85",
+    "operation-catalog.json": "290e147957005a4044d6f2b4db832a87893774d866407f922dd39b7924248b0d"
+  }
+}

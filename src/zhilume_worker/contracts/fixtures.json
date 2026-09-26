@@ -1,0 +1,4 @@
+{
+  "valid":[{"protocolVersion":"1.0","messageId":"one","type":"hello","payload":{"capabilities":["mock.text.echo.v1"]}},{"protocolVersion":"1.0","messageId":"two","type":"task.progress","jobId":"j","attemptId":"a","leaseId":"l","sequence":1,"payload":{"stage":"processing","progress":0.2}}],
+  "invalid":[{"protocolVersion":"2.0","messageId":"one","type":"hello","payload":{}},{"protocolVersion":"1.0","messageId":"two","type":"task.progress","payload":{}},{"protocolVersion":"1.0","messageId":"three","type":"hello","payload":{},"unexpected":true}]
+}
