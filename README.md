@@ -89,3 +89,5 @@ uv run zhilume-worker --server https://your-server --comfy-config config/comfy.l
 - https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_qwen_Image_2512.json
 - https://github.com/Comfy-Org/workflow_templates/blob/main/templates/image_qwen_image_2_1_image_edit.json
 - https://github.com/Comfy-Org/ComfyUI/blob/master/server.py
+
+本机 WSL Ubuntu 22.04 / Python 3.12 完整 CPU 与协议验收已通过，包含真实部署脚本注册及身份复用；云端网络、公共模型挂载与真实 GPU 推理仍待验收，见 [部署说明](deploy/README.md)。

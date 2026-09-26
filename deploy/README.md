@@ -1,6 +1,6 @@
 # 优云智算部署准备
 
-目标为上海二 A、华北二 A 的容器实例。部署到专用目录，不修改其他项目的 ComfyUI 或 Python 环境。本次查询实例列表为 0；下面流程已准备，尚未在云实例执行，不能视为 Linux / GPU 验收。
+目标为上海二 A、华北二 A 的容器实例。部署到专用目录，不修改其他项目的 ComfyUI 或 Python 环境。本次查询实例列表为 0。安装/启动脚本、完整 Worker 与 CPU/协议链路已在本机 WSL Ubuntu 22.04、Python 3.12.13 验收；尚未在云实例执行，不代表云端网络、公共模型挂载或 GPU 推理通过。
 
 ## 1. 安装独立 Worker
 
@@ -49,3 +49,10 @@ bash deploy/run.sh
 镜像中只保存依赖、程序、工作流和软链接，不保存 `.state`、一次性凭证、用户输入/输出、日志或真实环境配置。必须用新实例分别验证两个区域的挂载和冷启动，验证通过后再制作/发布镜像。
 
 官方依据（2026-09-26 核对）：[公共模型库与软链接](https://compshare.cn/docs/operation/gpu/usepublicmodel)、[只读实例列表接口](https://compshare.cn/docs/gpus/instance/describecompshareinstance)。官方说明与示例同时出现 `/models` 和 `/model`，因此以实例真实文件为准。
+
+
+## 本机 Linux 验收
+
+2026-09-26：Worker 14/14 测试通过（含真实 FFmpeg 截取/抽音轨、符号链接）；Server 11/11 集成测试通过，另加部署启动脚本专项 1/1。专项直接运行 `deploy/run.sh`，验证注册、文本回传、身份文件 0600 权限，以及不传接入凭证的重启身份复用。测试 ComfyUI 为模拟服务，没有启动真实 ComfyUI 或加载模型。
+
+三端仓库同级放置后，在 Server 仓库执行 `bash scripts/accept-linux.sh` 可重跑。本轮安装环境与数据在本机 WSL 独立目录，不修改用户 Server 数据；未申请云端资源。
