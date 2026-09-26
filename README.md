@@ -1,6 +1,8 @@
 # Zhilume Worker
 
-Python + asyncio 的主动连接执行端。当前 0.3.0，提供 CPU 视频截取/抽音轨、显式模拟能力，以及可选择启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。配套 Studio 0.5.0 / Server 0.4.0。本地假 ComfyUI 联调已通过；未执行真实 GPU 推理。
+Python + asyncio 的主动连接执行端。当前 0.4.0，提供 CPU 视频截取/抽音轨、显式模拟能力，以及可选择启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。配套 Studio 0.7.0 / Server 0.5.0。本地假 ComfyUI 联调已通过；未执行真实 GPU 推理。
+
+新增 [云端部署准备](deploy/README.md)：独立 Python 环境、明确模型清单、软链接规划/应用、只读服务检查和默认不启用图片执行的启动脚本。模型链接在本机 WSL Ubuntu 实测，不等于云平台或 GPU 验收。
 
 ## 本地运行
 

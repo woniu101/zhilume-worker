@@ -1,12 +1,13 @@
 [project]
 name = "zhilume-worker"
-version = "0.3.0"
+version = "0.4.0"
 description = "Outbound execution worker for Zhilume"
 requires-python = ">=3.11"
 dependencies = ["httpx>=0.28,<0.29", "websockets>=15,<16", "jsonschema>=4.23,<5", "Pillow>=11,<13"]
 
 [project.scripts]
 zhilume-worker = "zhilume_worker.__main__:main"
+zhilume-prepare = "zhilume_worker.deployment:main"
 zhilume-preflight = "zhilume_worker.preflight:main"
 
 [build-system]

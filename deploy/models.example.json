@@ -1,0 +1,41 @@
+{
+  "note": "路径来自目录快照；必须在实际挂载上检查。缺失或歧义时停止，不自动下载或覆盖。",
+  "links": [
+    {
+      "target": "diffusion_models/qwen_image_2512_fp8_e4m3fn.safetensors",
+      "sources": [
+        "ModelScope/Comfy-Org/Qwen-Image_ComfyUI/split_files/diffusion_models/qwen_image_2512_fp8_e4m3fn.safetensors"
+      ]
+    },
+    {
+      "target": "text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "sources": [
+        "ModelScope/Comfy-Org/Qwen-Image_ComfyUI/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors"
+      ]
+    },
+    {
+      "target": "vae/qwen_image_vae.safetensors",
+      "sources": [
+        "ModelScope/Comfy-Org/Qwen-Image_ComfyUI/split_files/vae/qwen_image_vae.safetensors"
+      ]
+    },
+    {
+      "target": "diffusion_models/qwen_image_2.1_int8_convrot.safetensors",
+      "sources": [
+        "ModelScope/Comfy-Org/Qwen-Image-2.1/diffusion_models/qwen_image_2.1_int8_convrot.safetensors"
+      ]
+    },
+    {
+      "target": "text_encoders/qwen3vl_8b_int8_convrot.safetensors",
+      "sources": [
+        "ModelScope/Comfy-Org/Qwen-Image-2.1/text_encoders/qwen3vl_8b_int8_convrot.safetensors"
+      ]
+    },
+    {
+      "target": "vae/qwen_image_2.1_vae_bf16.safetensors",
+      "sources": [
+        "ModelScope/Comfy-Org/Qwen-Image-2.1/vae/qwen_image_2.1_vae_bf16.safetensors"
+      ]
+    }
+  ]
+}

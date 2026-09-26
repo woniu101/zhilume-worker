@@ -1,1 +1,1 @@
-"""Zhilume Worker. Real transport, simulated computation only."""
+"""Zhilume outbound worker: CPU media, simulation and opt-in ComfyUI execution."""
