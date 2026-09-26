@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from .image_workflows import profiles, validate_environment
-from .media import binary
+import shutil
 from .model_links import plan_links, apply_links
 
 
@@ -56,7 +56,7 @@ def main():
     args = parser.parse_args()
     if bool(args.manifest) != bool(args.comfy_root) or (args.apply_links and not args.manifest):
         parser.error("模型链接需要同时提供 --manifest 和 --comfy-root")
-    result = {"python": platform.python_version(), "platform": platform.system(), "ffmpegAvailable": bool(binary()), "gpuJobsSubmitted": False}
+    result = {"python": platform.python_version(), "platform": platform.system(), "ffmpegAvailable": bool(shutil.which("ffmpeg")), "gpuJobsSubmitted": False}
     try:
         if args.manifest:
             links = plan_links(json.loads(args.manifest.read_text("utf-8")), args.model_root or [Path("/model"), Path("/models")], args.comfy_root)

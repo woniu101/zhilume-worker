@@ -1,1 +1,1 @@
-"""Zhilume outbound worker: CPU media, simulation and opt-in ComfyUI execution."""
+"""Zhilume generation worker: authenticated inbound service and opt-in ComfyUI execution."""

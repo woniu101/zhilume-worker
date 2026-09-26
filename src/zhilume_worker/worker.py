@@ -9,7 +9,6 @@ from pathlib import Path
 
 import jsonschema
 
-from . import media
 from .comfy import ComfyExecutor
 
 LOG = logging.getLogger("zhilume.worker")
@@ -22,7 +21,7 @@ class Worker:
     def __init__(self, args):
         self.args = args
         self.comfy = ComfyExecutor.from_file(args.comfy_config) if getattr(args, "enable_image_execution", False) else None
-        self.capabilities = CAPABILITIES + (list(media.OPERATIONS) if media.binary() else [])
+        self.capabilities = list(CAPABILITIES)
         self.root = Path(args.state).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.active = {}
@@ -55,7 +54,7 @@ class Worker:
                 filename = "文本回显.txt"
                 output = directory / "output.txt"
                 output.write_text(source["text"], "utf-8")
-            elif operation == CAPABILITIES[1] or operation in media.OPERATIONS:
+            elif operation == CAPABILITIES[1]:
                 filename = source["asset"]["filename"]
                 output = directory / ("output" + Path(filename).suffix)
                 await self.download(job, source["asset"], output)
@@ -76,14 +75,7 @@ class Worker:
                 output, filename = await self.comfy.process(operation, source, paths, directory, image_progress, job["attemptId"])
             else:
                 raise ValueError("不支持的能力")
-            if operation in media.OPERATIONS:
-                sequence = 0
-                async def progress(value):
-                    nonlocal sequence
-                    sequence += 1
-                    await self.send("task.progress", {"progress": value, "stage": "CPU 媒体处理"}, job, sequence=sequence)
-                output, filename = await media.process(operation, output, directory, source, progress)
-            elif operation in CAPABILITIES:
+            if operation in CAPABILITIES:
                 for step in range(1, 6):
                     await asyncio.sleep(self.args.delay / 5)
                     await self.send("task.progress", {"progress": step / 6, "stage": "模拟执行（不调用模型）"}, job, sequence=step)

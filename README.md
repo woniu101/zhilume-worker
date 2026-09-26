@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.5.0，配套 Studio 0.8.0 / Server 0.6.0，协议 2.0。提供 CPU 视频截取/抽音轨、模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.6.0，配套 Studio 0.9.0 / Server 0.7.0，协议 2.0。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
 
 ## 启动与接入
 
@@ -36,11 +36,9 @@ uv build
 
 wheel 与源码包在 dist/，包括协议快照；契约由 Server/contracts 导出。Linux 安装和模型链接见 [部署说明](deploy/README.md)。本地模拟 ComfyUI 不代表真实 GPU 验收。
 
-## CPU 处理与云端准备
+## 云端准备
 
-先安装支持 libx264 / AAC / PCM 的 FFmpeg，加入 PATH，或设置 `ZHILUME_FFMPEG` 为可执行路径。Worker 在找不到 FFmpeg 时不会发布 CPU 媒体能力。Linux 可使用系统包管理器安装 FFmpeg；无需 GPU、CUDA、ComfyUI，接入服务使用 FastAPI/Uvicorn。
-
-媒体任务按范围精确解码/编码，输出 MP4（H.264/AAC）或 WAV（PCM）。FFmpeg 为受管理子进程，任务取消或租约过期时停止；输入由 Server 上传，输出由 Server 下载并归档。
+视频截取和抽音轨已移至 Studio Electron / Server 共享模块，Worker 不再发布这两项能力。云端 FFmpeg 可供生成工作流使用，但不是接入和图片推理的先决依赖。
 
 ```bash
 uv run zhilume-preflight --comfy-url http://127.0.0.1:8188 --model-root /model --model-root /models

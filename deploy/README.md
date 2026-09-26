@@ -18,7 +18,7 @@ bash deploy/run-comfy.sh
 
 ## 1. 安装独立 Worker
 
-在已有实例克隆本仓库，安装 uv 后运行 `bash deploy/install.sh`。使用单独 Python 3.12 环境和 `uv.lock`，不会修改镜像自带的 Python 3.10，也不安装 Torch 或下载模型。FFmpeg 使用实例已有版本；若未安装，不会发布 CPU 媒体能力。
+在已有实例克隆本仓库，安装 uv 后运行 `bash deploy/install.sh`。使用单独 Python 3.12 环境和 `uv.lock`，不会修改镜像自带的 Python 3.10，也不安装 Torch 或下载模型。云端 FFmpeg 可保留供生成工作流使用；普通视频截取和抽音轨由 Studio / Server 自带 FFmpeg 执行，不依赖此实例。
 
 ## 2. 链接公共权重
 
@@ -48,7 +48,7 @@ bash deploy/run.sh
 
 `zhilume-prepare` 默认检查 Python/FFmpeg；提供 `--worker <地址>` 时从环境变量 ZHILUME_WORKER_TOKEN 读取密钥，只 GET /api/v1/system。提供 `--comfy-config config/comfy.local.json` 时只读检查内部 ComfyUI /object_info，不提交 prompt。
 
-接入后在管理台核对心跳、能力、忙碌状态；执行文本回显、素材复制、CPU 视频截取/抽音轨，并检查结果归档。断开再连、取消、Worker/Server 重启分别验收。每个 Worker 状态目录只绑定一个 Server；Server 保留 worker-connections.json 以复用稳定身份。
+接入后在管理台核对心跳、能力、忙碌状态；执行文本回显、素材复制与已启用的图片生成，并检查结果归档。断开再连、取消、Worker/Server 重启分别验收。每个 Worker 状态目录只绑定一个 Server；Server 保留 worker-connections.json 以复用稳定身份。
 
 网络可达性由用户解决，本项目不实现或引导配置 SSH 隧道、组网、中继。不同可用区的实际访问入口仍需现场验证。
 
