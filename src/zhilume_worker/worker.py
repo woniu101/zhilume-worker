@@ -38,6 +38,8 @@ class Worker:
     @property
     def video(self): return self.manager.ready('video')
     @property
+    def language(self): return self.manager.ready('language')
+    @property
     def resource_ids(self): return [g['uuid'] for g in self.manager.gpus] or ['cpu:' + getattr(self, 'worker_id', 'unbound')]
 
     async def send(self, kind, payload=None, job=None, **extras):
@@ -72,8 +74,8 @@ class Worker:
                 filename = source["asset"]["filename"]
                 output = directory / ("output" + Path(filename).suffix)
                 await self.download(job, source["asset"], output)
-            elif (operation.startswith("image.") and self.comfy) or (operation == "audio.speech.v1" and self.speech) or (operation == "video.generate.v1" and self.video):
-                kind = 'video' if operation.startswith('video.') else 'speech' if operation.startswith('audio.') else 'image'
+            elif (operation.startswith("image.") and self.comfy) or (operation == "audio.speech.v1" and self.speech) or (operation == "video.generate.v1" and self.video) or (operation in ("text.generate.v1", "prompt.optimize.v1") and self.language):
+                kind = 'language' if operation.startswith(('text.', 'prompt.')) else 'video' if operation.startswith('video.') else 'speech' if operation.startswith('audio.') else 'image'
                 lease = ResourceLease(self.resource_ids, self.worker_id + ':' + kind)
                 await lease.acquire()
                 if self.quarantined_lease: raise ValueError('GPU 资源处于隔离状态，须由管理员诊断')
@@ -92,7 +94,9 @@ class Worker:
                     nonlocal sequence
                     sequence += 1
                     await self.send("task.progress", {"progress": None, "stage": stage}, job, sequence=sequence)
-                if operation == "video.generate.v1":
+                if kind == "language":
+                    output, filename = await self.language.process(operation, source, paths, directory, image_progress)
+                elif operation == "video.generate.v1":
                     output, filename = await self.video.process(operation, source, paths, directory, image_progress, job["attemptId"])
                 elif operation == "audio.speech.v1":
                     output, filename = await self.speech.process(operation, source, paths, directory, image_progress)
@@ -121,7 +125,7 @@ class Worker:
                 except asyncio.TimeoutError:
                     pass
             if executor:
-                kind = 'image' if operation.startswith('image.') else 'speech' if operation.startswith('audio.') else 'video'
+                kind = 'language' if operation.startswith(('text.', 'prompt.')) else 'image' if operation.startswith('image.') else 'speech' if operation.startswith('audio.') else 'video'
                 self.manager.states[kind]['inferenceVerified'] = True
             shutil.rmtree(directory)
             LOG.info("任务已由 Server 归档 %s", job["jobId"])
@@ -146,7 +150,7 @@ class Worker:
             self.active.pop(job["attemptId"], None)
             if executor:
                 folder = self.root / 'logs'; folder.mkdir(exist_ok=True)
-                kind = 'image' if operation.startswith('image.') else 'speech' if operation.startswith('audio.') else 'video'
+                kind = 'language' if operation.startswith(('text.', 'prompt.')) else 'image' if operation.startswith('image.') else 'speech' if operation.startswith('audio.') else 'video'
                 with (folder / (kind + '.jsonl')).open('a', encoding='utf-8') as log:
                     log.write(json.dumps({'jobId':job['jobId'], 'attemptId':job['attemptId'], 'result':terminal_message[0] if terminal_message else 'archived', 'resourceReleased':not bool(self.quarantined_lease)}) + '\n')
             if terminal_message: await self.send(terminal_message[0], terminal_message[1], job)
@@ -171,11 +175,12 @@ class Worker:
         await asyncio.to_thread(copy)
 
     async def hello(self):
+        language_profiles = self.language.public_profiles if self.language else []
         image_profiles = self.comfy.public_profiles if self.comfy else []
         speech_profiles = self.speech.public_profiles if self.speech else []
         video_profiles = self.video.public_profiles if self.video else []
-        capabilities = (["video.generate.v1"] if video_profiles else []) + (["audio.speech.v1"] if speech_profiles else []) + self.capabilities + sorted({op for p in image_profiles for op in p["operations"]})
-        await self.send("hello", {"workerId": self.worker_id, "capabilities": capabilities, "executionSpecs": [{"kind": k, "spec": p} for k, profiles in [("image", image_profiles), ("speech", speech_profiles), ("video", video_profiles)] for p in profiles], "deployment": {"capacity": 1, "resourceIds": self.resource_ids}, "activeAttempts": list(self.active)})
+        capabilities = (["text.generate.v1", "prompt.optimize.v1"] if language_profiles else []) + (["video.generate.v1"] if video_profiles else []) + (["audio.speech.v1"] if speech_profiles else []) + self.capabilities + sorted({op for p in image_profiles for op in p["operations"]})
+        await self.send("hello", {"workerId": self.worker_id, "capabilities": capabilities, "executionSpecs": [{"kind": k, "spec": p} for k, profiles in [("image", image_profiles), ("speech", speech_profiles), ("video", video_profiles), ("language", language_profiles)] for p in profiles], "deployment": {"capacity": 1, "resourceIds": self.resource_ids}, "activeAttempts": list(self.active)})
         for state in list(self.active.values()):
             if not state["inputs_ready"].is_set():
                 await self.send("task.accepted", job=state["job"])

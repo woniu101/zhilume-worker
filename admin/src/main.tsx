@@ -416,7 +416,7 @@ function App() {
                   </h2>
                   <p className="description">
                     运行方式：
-                    {x.id === "speech" ? "独立 Python 进程" : "ComfyUI 服务"}
+                    {x.id === "language" ? "独立 llama.cpp 进程" : x.id === "speech" ? "独立 Python 进程" : "ComfyUI 服务"}
                   </p>
                   <div className="verification">
                     <Status state={x.state}>

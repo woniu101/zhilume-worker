@@ -1,7 +1,7 @@
 {
   "version": "3.0.0",
   "files": {
-    "worker-message.schema.json": "6038e55d6c0a27c9771afad7f3096fb63f2b89bbce229b0e69160e1549c743fd",
+    "worker-message.schema.json": "bb3023d1331158265b7233db339d922e2c9029eb05adfeb2e50516c3d4920d81",
     "fixtures.json": "1b4a1118cd6e1c369b6e366bb0cf6c8b0019b03d91a1a6d74585d7e2ef7334c4",
     "operation-catalog.json": "789c17816e1588809972763a63f9a6f562a822f1edd7ce2bc156051849763b63"
   }

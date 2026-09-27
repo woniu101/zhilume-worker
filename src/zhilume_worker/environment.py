@@ -17,13 +17,13 @@ def defaults():
 
 
 def validate_structure(kind, config):
-    if kind not in ('image', 'speech', 'video') or not isinstance(config, dict):
+    if kind not in ('image', 'speech', 'video', 'language') or not isinstance(config, dict):
         raise ValueError('执行器配置须为对象')
     if config.get('runtimeId'):
         from .runtimes import RuntimeManager
         RuntimeManager.validate_id(config['runtimeId'])
-        if kind == 'speech': raise ValueError('IndexTTS 使用自己的独立 Python 进程，不关联 ComfyUI 服务')
-    strings = ('python', 'repository', 'modelDirectory', 'workingDirectory', 'device', 'url', 'ffmpeg', 'ffprobe')
+        if kind in ('speech', 'language'): raise ValueError('此执行器使用独立受管进程，不关联 ComfyUI 服务')
+    strings = ('python', 'repository', 'modelDirectory', 'workingDirectory', 'device', 'url', 'ffmpeg', 'ffprobe', 'binary', 'modelFile')
     for key in strings:
         if key in config and not isinstance(config[key], str): raise ValueError(f'{key} 须为文本')
     for key in ('exclusive', 'enableEmotionText'):
@@ -78,7 +78,10 @@ async def inspect_environment(kind, config, items):
             return '路径可访问（软链接有效）' if path.is_symlink() else '路径可访问'
         return await asyncio.to_thread(check)
 
-    if kind == 'speech':
+    if kind == 'language':
+        for key, title in [('binary', 'llama-server 程序'), ('modelFile', 'GGUF 模型文件')]:
+            await step(key, title, '填写已有文件的绝对路径；检查不会下载或加载模型。', lambda key=key: path_check(key))
+    elif kind == 'speech':
         for key, title, directory, required in [('python', 'Python 程序', False, True), ('repository', 'IndexTTS 程序目录', True, True), ('modelDirectory', '模型目录', True, True), ('workingDirectory', '工作目录', True, False), ('ffmpeg', 'FFmpeg 程序', False, True)]:
             await step(key, title, '在环境表单修正路径，并检查服务用户权限、挂载及软链接目标。', lambda key=key, directory=directory, required=required: path_check(key, directory, required))
         async def dependencies():

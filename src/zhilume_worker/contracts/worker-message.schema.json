@@ -109,7 +109,8 @@
                       "enum": [
                         "image",
                         "speech",
-                        "video"
+                        "video",
+                        "language"
                       ]
                     },
                     "spec": {

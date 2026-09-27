@@ -12,7 +12,7 @@ def main():
     if wheel.parent != root/'dist' or not wheel.name.startswith('zhilume_worker-') or wheel.suffix!='.whl':
         parser.error('请选择 dist 内的 Worker wheel')
     version=wheel.name.split('-')[1]
-    paths=['deploy/install.sh','deploy/portable.md','deploy/standard-install.md','deploy/Dockerfile','deploy/compose.yaml',
+    paths=['deploy/language.md','config/language.example.json','deploy/install.sh','deploy/portable.md','deploy/standard-install.md','deploy/Dockerfile','deploy/compose.yaml',
            'deploy/runtime.linux.example.json','deploy/model-paths.linux.example.yaml',
            'src/zhilume_worker/releases.py','.dockerignore']
     paths += ['config/comfy.example.json','config/video.example.json','config/indextts.example.json']

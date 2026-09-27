@@ -16,7 +16,7 @@ class Executor(Protocol):
     async def release(self): ...
 
 
-ADAPTERS = {'image': ('comfy', 'ComfyExecutor'), 'speech': ('speech', 'SpeechExecutor'), 'video': ('video', 'VideoExecutor')}
+ADAPTERS = {'language': ('language', 'LanguageExecutor'), 'image': ('comfy', 'ComfyExecutor'), 'speech': ('speech', 'SpeechExecutor'), 'video': ('video', 'VideoExecutor')}
 
 
 class ExecutorManager:
@@ -85,7 +85,7 @@ class ExecutorManager:
             self.persist()
             await self.worker.hello()
             if policy == 'cancel':
-                prefixes = tuple({'image': 'image.', 'video': 'video.', 'speech': 'audio.'}[k] for k in consumers)
+                prefixes = tuple({'image': 'image.', 'video': 'video.', 'speech': 'audio.', 'language': ('text.', 'prompt.')}[k] for k in consumers)
                 # Cancel every shared consumer before disable() waits for its GPU
                 # lease; otherwise the first idle adapter could wait on a video
                 # task which has not received its cancellation yet.
@@ -204,7 +204,7 @@ class ExecutorManager:
         self.entries.setdefault(kind, {'config': {}})['enabled'] = False; self.persist()
         self.draining.add(kind); self.states[kind]['state'] = 'draining'
         await self.worker.hello()
-        prefix = {'image': 'image.', 'speech': 'audio.', 'video': 'video.'}[kind]
+        prefix = {'image': 'image.', 'speech': 'audio.', 'language': ('text.', 'prompt.'), 'video': 'video.'}[kind]
         active = [s for s in self.worker.active.values() if s['job']['payload']['operation'].startswith(prefix)]
         tasks = [s['task'] for s in active]
         if policy == 'cancel':

@@ -154,5 +154,24 @@
         }
       }
     ]
+  },
+  "language": {
+    "binary": "/opt/llama.cpp/bin/llama-server",
+    "modelFile": "/models/language/model.gguf",
+    "modelId": "",
+    "port": 8190,
+    "device": "0",
+    "contextSize": 8192,
+    "maxInputCharacters": 6000,
+    "maxOutputTokens": 1024,
+    "timeoutSeconds": 600,
+    "identity": {
+      "revision": "",
+      "quantization": "",
+      "artifacts": {
+        "model": "",
+        "binary": ""
+      }
+    }
   }
 }

@@ -122,7 +122,7 @@ def attach_management(app, worker, credentials, get_owner, unbind):
     @app.get('/management/api/executors/{kind}/logs')
     async def executor_logs(kind: str, request: Request):
         auth(request)
-        if kind not in ('image', 'speech', 'video'): raise HTTPException(404, '未知执行器')
+        if kind not in ('image', 'speech', 'video', 'language'): raise HTTPException(404, '未知执行器')
         path = worker.root / 'logs' / (kind + '.jsonl')
         if not path.exists(): return []
         def tail():
@@ -147,7 +147,7 @@ def attach_management(app, worker, credentials, get_owner, unbind):
     @app.post('/management/api/executors/{kind}/{action}')
     async def action(kind: str, action: str, request: Request):
         auth(request)
-        if kind not in ('image', 'speech', 'video'): raise HTTPException(404, '未知执行器')
+        if kind not in ('image', 'speech', 'video', 'language'): raise HTTPException(404, '未知执行器')
         body = await request.json()
         if action == 'check': return launch(kind + ':check', lambda: worker.manager.check(kind))
         if action == 'enable': return launch(kind + ':enable', lambda: worker.manager.check(kind, True))
@@ -194,7 +194,7 @@ def attach_management(app, worker, credentials, get_owner, unbind):
     async def diagnostics(request: Request):
         auth(request)
         logs = {}
-        for kind in ('image','speech','video'):
+        for kind in ('image','speech','video','language'):
             path = worker.root / 'logs' / (kind + '.jsonl')
             if path.exists(): logs[kind] = path.read_text('utf-8')[-16000:]
         return redact({'workerId': worker.worker_id, 'executors': worker.manager.snapshot(),

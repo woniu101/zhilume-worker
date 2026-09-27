@@ -1,16 +1,16 @@
-# Worker 0.11：通用 Linux / WSL2 部署
+# Worker 0.12：通用 Linux / WSL2 部署
 
 核心与推理环境分开：只安装核心即可使用管理台；不需要 Node.js、Torch、ComfyUI、Server 或显卡。真实生成仍需准备对应 GPU 环境。上海二 A 已通过复用环境和标准安装的新独立环境 GPU 样本验收，两类记录分开保留；Windows 原生推理和其他云平台仍未验收。
 
 ## 1. 安装核心和启动管理台
 
-准备 Python 3.11+（建议 3.12）、uv，解压 `zhilume-worker-0.11.0-linux-bundle.tar.gz` 即可获得发布 wheel、安装入口和配置模板，无需克隆开发仓库。也可使用源码树与单独 wheel。安装依赖是显式操作，安装器不会自动安装系统 Python、启服务或改 systemd。
+准备 Python 3.11+（建议 3.12）、uv，解压 `zhilume-worker-0.12.0-linux-bundle.tar.gz` 即可获得发布 wheel、安装入口和配置模板，无需克隆开发仓库。也可使用源码树与单独 wheel。安装依赖是显式操作，安装器不会自动安装系统 Python、启服务或改 systemd。
 
 ```bash
 # 第一次可用系统 python3 执行 bootstrap；--python 指向预先准备的 3.12。
 bash deploy/install.sh install --program /opt/zhilume-worker --state /var/lib/zhilume-worker \
-  --wheel /path/to/zhilume_worker-0.11.0-py3-none-any.whl --python /path/to/python3.12
-bash deploy/install.sh activate --program /opt/zhilume-worker --state /var/lib/zhilume-worker --version 0.11.0
+  --wheel /path/to/zhilume_worker-0.12.0-py3-none-any.whl --python /path/to/python3.12
+bash deploy/install.sh activate --program /opt/zhilume-worker --state /var/lib/zhilume-worker --version 0.12.0
 /opt/zhilume-worker/current/bin/zhilume-worker --state /var/lib/zhilume-worker --show-management-token
 export ZHILUME_RESOURCE_LOCK_DIR=/var/lib/zhilume-gpu-locks
 /opt/zhilume-worker/current/bin/zhilume-worker --state /var/lib/zhilume-worker
@@ -23,7 +23,7 @@ export ZHILUME_RESOURCE_LOCK_DIR=/var/lib/zhilume-gpu-locks
 图片/视频适配器需显式安装轻量 Pillow 校验依赖到当前核心环境，推理依赖仍保持独立：
 
 ```bash
-uv pip install --python /opt/zhilume-worker/current/bin/python '/path/to/zhilume_worker-0.11.0-py3-none-any.whl[image,video]'
+uv pip install --python /opt/zhilume-worker/current/bin/python '/path/to/zhilume_worker-0.12.0-py3-none-any.whl[image,video]'
 ```
 
 ## 2. 选择环境管理方式

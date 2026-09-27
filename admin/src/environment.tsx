@@ -592,7 +592,7 @@ export function EnvironmentPanel({
   function prepare() {
     if (!templates) return;
     const next = structuredClone(templates[kind]);
-    if (kind !== "speech") next.profiles = [];
+    if (!["speech", "language"].includes(kind)) next.profiles = [];
     update(next);
   }
   async function save() {
@@ -654,11 +654,11 @@ export function EnvironmentPanel({
             </select>
           </label>
           <Status>
-            {kind === "speech" ? "独立 Python 进程" : "ComfyUI 服务"}
+            {kind === "language" ? "独立 llama.cpp 进程" : kind === "speech" ? "独立 Python 进程" : "ComfyUI 服务"}
           </Status>
         </div>
         <p className="description">
-          {kind === "speech"
+          {kind === "language" ? "语言模型采用独立受管进程，不属于 ComfyUI；可先配置和诊断，再单独验收 GPU 推理。" : kind === "speech"
             ? "复用已有 IndexTTS 环境。填写的是 Worker 部署机器上的路径，不是浏览器所在电脑的路径。"
             : "Qwen 图片和 H3 视频可复用已有专用服务，或选择上方配置的托管服务。服务运行和执行器接单分别管理；不会因保存配置而启动或安装推理环境。"}
         </p>
@@ -696,7 +696,13 @@ export function EnvironmentPanel({
           </label>
         ) : (
           <>
-            {kind === "speech" ? (
+            {kind === "language" ? <>
+              <p className="description">使用已有 llama-server 与单文件 GGUF。任务持有 GPU 锁后才加载模型，结束或取消后停止进程。首版纯文本；检查通过不代表真实推理通过。</p>
+              <div className="form-grid">{[["binary","llama-server 程序"],["modelFile","GGUF 模型文件"],["modelId","模型标识"],["device","GPU 设备序号"]].map(([k,label]) => <Field key={k} label={label} value={config[k]} change={v=>set(k,v)}/>)}
+              {[["port","本地服务端口"],["contextSize","上下文容量"],["maxInputCharacters","输入字符上限"],["maxOutputTokens","输出 Token 上限"]].map(([k,label])=><Field key={k} label={label} type="number" value={config[k]} change={v=>set(k,v)}/>)}</div>
+              <div className="form-grid">{[["revision","模型版本"],["quantization","量化规格"]].map(([k,label])=><Field key={k} label={label} value={config.identity?.[k]} change={v=>set("identity",{...config.identity,[k]:v})}/>)}
+              {["model","binary"].map(k=><Field key={k} label={k === "model" ? "模型 SHA256 标识" : "程序 SHA256 标识"} value={config.identity?.artifacts?.[k]} change={v=>set("identity",{...config.identity,artifacts:{...config.identity?.artifacts,[k]:v}})}/>)}</div>
+            </> : kind === "speech" ? (
               <>
                 <div className="form-grid">
                   {[
@@ -927,7 +933,7 @@ export function EnvironmentPanel({
           <p className="muted">尚无逐项检查结果。保存配置后运行检查。</p>
         )}
       </section>
-      <details className="panel">
+      {kind !== "language" && <details className="panel">
         <summary>安装独立标准环境（Linux / WSL2）</summary>
         <p className="description">
           已有环境无需重复安装。安装是独立操作，不下载模型、不启动 GPU。
@@ -982,7 +988,7 @@ export function EnvironmentPanel({
             </button>
           </>
         )}
-      </details>
+      </details>}
     </>
   );
 }

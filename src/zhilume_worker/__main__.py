@@ -18,7 +18,7 @@ def main():
     parser.add_argument("--state", default=".state")
     parser.add_argument("--show-management-token", action="store_true")
     parser.add_argument("--executor-action", choices=["configure", "check", "enable", "disable", "diagnose"])
-    parser.add_argument("--executor", choices=["image", "speech", "video"])
+    parser.add_argument("--executor", choices=["image", "speech", "video", "language"])
     parser.add_argument("--runtime", help="托管运行环境名称")
     parser.add_argument("--runtime-action", choices=["configure", "check", "start", "stop"])
     parser.add_argument("--config-file")

@@ -112,6 +112,7 @@ export function Brand() {
 }
 
 export const executorNames: Record<string, string> = {
+  language: "通用语言模型",
   image: "Qwen 图片",
   speech: "IndexTTS 语音",
   video: "H3 视频",
