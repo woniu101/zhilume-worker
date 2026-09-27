@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.10.0，配套 Studio 0.13.0 / Server 0.10.0，协议 3.0。核心不默认安装推理环境。部署以 [通用 Linux / WSL2 部署](deploy/portable.md) 为准：程序安装/升级/回退、复用外部服务、托管 ComfyUI 进程及共享 GPU 资源隔离。管理页面内置于 wheel，不需要 Node.js。此前上海二 A 模型验收见 [云端记录](deploy/README.md)，不替代本次托管模式的真实 GPU 验收。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.10.0，配套 Studio 0.13.0 / Server 0.10.0，协议 3.0。核心不默认安装推理环境。部署以 [通用 Linux / WSL2 部署](deploy/portable.md) 为准：程序安装/升级/回退、复用外部服务、托管 ComfyUI 进程及共享 GPU 资源隔离。管理页面内置于 wheel，不需要 Node.js。上海二 A 已通过复用现有环境的托管 Qwen/H3/IndexTTS 切换、取消停服、恢复及重启验收；全新 GPU 环境安装、其他平台和容器 GPU 仍待实测。
 
 ## 启动与接入
 

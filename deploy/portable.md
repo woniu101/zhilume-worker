@@ -1,6 +1,6 @@
 # Worker 0.10：通用 Linux / WSL2 部署
 
-核心与推理环境分开：只安装核心即可使用管理台；不需要 Node.js、Torch、ComfyUI、Server 或显卡。真实生成仍需准备对应 GPU 环境。Windows 原生推理和其他云 GPU 实测尚未验收。本轮未启动云实例、安装 GPU 推理依赖或下载模型。
+核心与推理环境分开：只安装核心即可使用管理台；不需要 Node.js、Torch、ComfyUI、Server 或显卡。真实生成仍需准备对应 GPU 环境。上海二 A 已通过复用已有推理环境的托管模式真实 GPU 验收；Windows 原生推理、全新推理环境安装和其他云 GPU 仍未验收。
 
 ## 1. 安装核心和启动管理台
 
@@ -67,6 +67,8 @@ zhilume-worker --state /var/lib/zhilume-worker --runtime comfy-main --runtime-ac
 - WSL2 Ubuntu 22.04：受管进程、子进程回收、取消启动、拒绝占用端口、版本切换及数据保留专项。
 - `deploy/accept-portable.py`：显式安装前后两个核心 wheel，在全新目录启动管理台，校验无 Torch/Pillow、未绑定 Server 可用、运行中拒绝升级、回退及身份保留。只运行 CPU 核心，不安装推理依赖。
 - 标准 ComfyUI/IndexTTS 安装仍须目标 GPU 环境验收。安装器固定上游修订并保存实际依赖清单；清单属于安装溯源，不等于完整 CUDA 依赖锁或推理兼容性证书。
-- 其他云平台、自有 NVIDIA Linux 主机、容器 GPU、华北二 A、新版 H3 及托管模式真实 GPU 切换仍待实测。不得以 CPU 测试或旧版外部服务验收替代。
+- 上海二 A RTX 5090：0.10.0 wheel 安装并沿用 state，Qwen/H3 共用托管 ComfyUI，IndexTTS 独立环境。图片→语音→H3 文生视频均真实生成并归档，显存回到 780–828 MiB；视频运行时取消并停止共享服务后为 2 MiB。服务恢复后再次生成成功；正常重启 Worker 回收受管进程，身份/凭证/绑定不变，无 Server 时仍可启动和检查。
+- 推理期间管理接口采样 50 次，P95 614 ms，无探测失败；Server 不监听入站端口。结果仅代表本次单卡样本。H3 Ref2VA/首尾帧本轮未重测，硬崩溃及运行中等待自然完成再停服尚待验收。
+- 其他云平台、自有 NVIDIA Linux 主机、容器 GPU、华北二 A 仍待实测。不得以本次复用环境样本替代全新安装或跨平台验收。完整记录见 Server 仓库 `docs/worker-managed-gpu-acceptance-2026-09-27.md`。
 
 语言模型执行器放在此部署基础之后，首验候选 Qwen3.5-9B；本版本尚未实现语言模型推理适配器。
