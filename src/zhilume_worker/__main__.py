@@ -21,7 +21,11 @@ def main():
     parser.add_argument("--enable-image-execution", action="store_true")
     parser.add_argument("--speech-config")
     parser.add_argument("--enable-speech-execution", action="store_true")
+    parser.add_argument("--video-config")
+    parser.add_argument("--enable-video-execution", action="store_true")
     args = parser.parse_args()
+    if args.enable_video_execution and not args.video_config:
+        parser.error("启用视频执行需要 --video-config")
     if args.enable_speech_execution and not args.speech_config:
         parser.error("启用语音执行需要 --speech-config")
     if args.enable_image_execution and not args.comfy_config:

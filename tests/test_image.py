@@ -123,7 +123,7 @@ class ImagesTest(unittest.IsolatedAsyncioTestCase):
         executor.stop = AsyncMock(side_effect=httpx.ConnectError("offline"))
         try:
             with tempfile.TemporaryDirectory() as root:
-                with self.assertRaisesRegex(ValueError, "图片执行已禁用"):
+                with self.assertRaisesRegex(ValueError, "执行已禁用"):
                     await executor.process("image.generate.v1", request(executor.profiles[0]), [], Path(root), AsyncMock())
             self.assertTrue(executor.poisoned)
             self.assertEqual(executor.public_profiles, [])

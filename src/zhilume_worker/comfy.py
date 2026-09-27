@@ -28,10 +28,14 @@ def normalize_image(path, output_format):
 
 
 class ComfyExecutor:
+    profile_factory = staticmethod(profiles)
+    environment_validator = staticmethod(validate_environment)
+    graph_builder = staticmethod(build_graph)
+
     def __init__(self, config, transport=None):
         if config.get("exclusive") is not True:
-            raise ValueError("图片执行需要专用 ComfyUI；请配置 exclusive: true")
-        self.profiles = profiles(config)
+            raise ValueError("生成执行需要专用 ComfyUI；请配置 exclusive: true")
+        self.profiles = self.profile_factory(config)
         self.timeout = config.get("timeoutSeconds", 1800)
         if type(self.timeout) is not int or not 1 <= self.timeout <= 7200:
             raise ValueError("执行超时应为 1–7200 秒")
@@ -47,7 +51,7 @@ class ComfyExecutor:
         response = await self.http.get("/object_info")
         response.raise_for_status()
         for profile in self.profiles:
-            validate_environment(response.json(), profile)
+            self.environment_validator(response.json(), profile)
 
     async def recover(self, root):
         """Reconcile crash leftovers before publishing any image capability."""
@@ -104,7 +108,7 @@ class ComfyExecutor:
                 response = await self.http.post("/interrupt", json={"prompt_id": prompt_id})
                 response.raise_for_status()
             await asyncio.sleep(.5)
-        raise ValueError("无法确认 ComfyUI 停止，已禁用图片执行，请检查实例后重启 Worker")
+        raise ValueError("无法确认 ComfyUI 停止，已禁用此 ComfyUI 执行，请检查实例后重启 Worker")
 
     async def process(self, operation, request, paths, directory, progress, attempt_id=None):
         if self.poisoned:
@@ -122,18 +126,9 @@ class ComfyExecutor:
                 queue = await self.queue()
                 if queue["queue_pending"] or queue["queue_running"]:
                     raise ValueError("专用 ComfyUI 正忙，请等待当前任务完成")
-                uploaded = []
-                for i, path in enumerate(paths):
-                    await progress("准备参考图")
-                    with path.open("rb") as file:
-                        response = await self.http.post("/upload/image", files={"image": (f"zhilume_{prompt_id}_{i}{path.suffix}", file)}, data={"type": "input", "overwrite": "false"})
-                    response.raise_for_status()
-                    value = response.json()
-                    name = str(PurePosixPath(value.get("subfolder", "")) / value["name"])
-                    if PurePosixPath(name).is_absolute() or ".." in PurePosixPath(name).parts or "\\" in name:
-                        raise ValueError("ComfyUI 上传路径无效")
-                    uploaded.append(name)
-                graph = build_graph(profile, operation, request, uploaded, "zhilume/" + prompt_id)
+                prepared = await self.prepare_inputs(profile, operation, request, paths, directory, progress)
+                uploaded = await self.upload_inputs(prepared, prompt_id, progress)
+                graph = self.graph_builder(profile, operation, request, uploaded, "zhilume/" + prompt_id)
                 # Set before POST: loss of the response does not mean submission failed.
                 self.record(record_path, prompt_id, "submitted")
                 submitted = True
@@ -160,23 +155,9 @@ class ComfyExecutor:
                         if status.get("completed"):
                             break
                     await asyncio.sleep(.5)
-                images = history.get("outputs", {}).get("output", {}).get("images", [])
-                if len(images) != 1 or images[0].get("type") != "output":
-                    raise ValueError("ComfyUI 未返回预期的单张图片")
-                await progress("校验并归档生成图片")
-                output = directory / "generated.png"
-                size = 0
-                async with self.http.stream("GET", "/view", params={k: images[0][k] for k in ("filename", "subfolder", "type")}) as response:
-                    response.raise_for_status()
-                    with output.open("wb") as file:
-                        async for chunk in response.aiter_bytes():
-                            size += len(chunk)
-                            if size > 64 * 1024 ** 2:
-                                raise ValueError("生成图片超过 64 MB")
-                            file.write(chunk)
-                await asyncio.to_thread(normalize_image, output, request["outputFormat"])
+                result = await self.collect_output(history, request, directory, progress)
                 self.record(record_path, prompt_id, "completed")
-                return output, "生成图片.png"
+                return result
         except BaseException:
             if submitted:
                 try:
@@ -185,5 +166,40 @@ class ComfyExecutor:
                         self.record(record_path, prompt_id, "stopped")
                 except BaseException:
                     self.poisoned = True
-                    raise ValueError("无法确认 GPU 任务停止；图片执行已禁用，请检查实例后重启 Worker") from None
+                    raise ValueError("无法确认 GPU 任务停止；此 ComfyUI 执行已禁用，请检查实例后重启 Worker") from None
             raise
+
+    async def prepare_inputs(self, profile, operation, request, paths, directory, progress):
+        return paths
+
+    async def upload_inputs(self, paths, prompt_id, progress):
+        uploaded = []
+        for i, path in enumerate(paths):
+            await progress("传输参考素材到 ComfyUI")
+            with path.open("rb") as file:
+                response = await self.http.post("/upload/image", files={"image": (f"zhilume_{prompt_id}_{i}{path.suffix}", file)}, data={"type": "input", "overwrite": "false"})
+            response.raise_for_status()
+            value = response.json()
+            name = str(PurePosixPath(value.get("subfolder", "")) / value["name"])
+            if PurePosixPath(name).is_absolute() or ".." in PurePosixPath(name).parts or "\\" in name:
+                raise ValueError("ComfyUI 上传路径无效")
+            uploaded.append(name)
+        return uploaded
+
+    async def collect_output(self, history, request, directory, progress):
+        images = history.get("outputs", {}).get("output", {}).get("images", [])
+        if len(images) != 1 or images[0].get("type") != "output":
+            raise ValueError("ComfyUI 未返回预期的单张图片")
+        await progress("校验并归档生成图片")
+        output = directory / "generated.png"
+        size = 0
+        async with self.http.stream("GET", "/view", params={k: images[0][k] for k in ("filename", "subfolder", "type")}) as response:
+            response.raise_for_status()
+            with output.open("wb") as file:
+                async for chunk in response.aiter_bytes():
+                    size += len(chunk)
+                    if size > 64 * 1024 ** 2:
+                        raise ValueError("生成图片超过 64 MB")
+                    file.write(chunk)
+        await asyncio.to_thread(normalize_image, output, request["outputFormat"])
+        return output, "生成图片.png"

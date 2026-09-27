@@ -11,4 +11,8 @@ if [[ "${ZHILUME_ENABLE_SPEECH:-0}" == '1' ]]; then
   : "${ZHILUME_SPEECH_CONFIG:?语音执行必须指定 IndexTTS 配置}"
   args+=(--enable-speech-execution --speech-config "$ZHILUME_SPEECH_CONFIG")
 fi
+if [[ "${ZHILUME_ENABLE_VIDEO:-0}" == '1' ]]; then
+  : "${ZHILUME_VIDEO_CONFIG:?视频执行必须指定 H3 配置}"
+  args+=(--enable-video-execution --video-config "$ZHILUME_VIDEO_CONFIG")
+fi
 exec uv run --frozen --no-sync zhilume-worker "${args[@]}"

@@ -1,5 +1,5 @@
 {
-  "version": "1.5.0",
+  "version": "1.6.0",
   "media": [
     {
       "id": "media.video.trim.v1",
@@ -238,6 +238,93 @@
       "maxReferenceSeconds": 30,
       "formats": [
         "wav"
+      ],
+      "status": "awaiting_gpu_validation"
+    }
+  ],
+  "videoOperations": [
+    {
+      "id": "video.generate.v1",
+      "name": "H3 视频生成",
+      "resource": "gpu",
+      "simulation": false,
+      "inputKinds": [
+        "text",
+        "image",
+        "video",
+        "audio"
+      ],
+      "outputKind": "video",
+      "version": "1.0"
+    }
+  ],
+  "videoModels": [
+    {
+      "id": "minimax-h3-fl2va",
+      "name": "MiniMax H3 首尾帧",
+      "workflowRevision": "h3-fl2va-v1",
+      "modes": [
+        "text",
+        "first",
+        "last",
+        "first-last"
+      ],
+      "fps": 24,
+      "frameStep": 17,
+      "frameOffset": 5,
+      "minFrames": 124,
+      "maxFrames": 345,
+      "requiredNodes": [
+        "UNETLoader",
+        "CLIPLoader",
+        "VAELoader",
+        "RandomNoise",
+        "BasicGuider",
+        "KSamplerSelect",
+        "BasicScheduler",
+        "SamplerCustomAdvanced",
+        "VAEDecode",
+        "VAEDecodeAudio",
+        "CreateVideo",
+        "SaveVideo",
+        "LoadImage",
+        "LoadVideo",
+        "GetVideoComponents",
+        "LoadAudio",
+        "MiniMaxH3ImageToVideo"
+      ],
+      "status": "awaiting_gpu_validation"
+    },
+    {
+      "id": "minimax-h3-ref2va",
+      "name": "MiniMax H3 全能参考",
+      "workflowRevision": "h3-ref2va-v1",
+      "modes": [
+        "reference"
+      ],
+      "fps": 24,
+      "frameStep": 17,
+      "frameOffset": 5,
+      "minFrames": 124,
+      "maxFrames": 345,
+      "requiredNodes": [
+        "UNETLoader",
+        "CLIPLoader",
+        "VAELoader",
+        "RandomNoise",
+        "BasicGuider",
+        "KSamplerSelect",
+        "BasicScheduler",
+        "SamplerCustomAdvanced",
+        "VAEDecode",
+        "VAEDecodeAudio",
+        "CreateVideo",
+        "SaveVideo",
+        "LoadImage",
+        "LoadVideo",
+        "GetVideoComponents",
+        "LoadAudio",
+        "MiniMaxH3ReferenceToVideo"
       ],
       "status": "awaiting_gpu_validation"
     }

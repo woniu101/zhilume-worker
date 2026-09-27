@@ -11,6 +11,7 @@ import jsonschema
 
 from .comfy import ComfyExecutor
 from .speech import SpeechExecutor
+from .video import VideoExecutor
 
 LOG = logging.getLogger("zhilume.worker")
 CAPABILITIES = ["mock.text.echo.v1", "mock.media.copy.v1"]
@@ -23,6 +24,7 @@ class Worker:
         self.args = args
         self.comfy = ComfyExecutor.from_file(args.comfy_config) if getattr(args, "enable_image_execution", False) else None
         self.speech = SpeechExecutor.from_file(args.speech_config) if getattr(args, "enable_speech_execution", False) else None
+        self.video = VideoExecutor.from_file(args.video_config) if getattr(args, "enable_video_execution", False) else None
         self.capabilities = list(CAPABILITIES)
         self.root = Path(args.state).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
@@ -60,7 +62,7 @@ class Worker:
                 filename = source["asset"]["filename"]
                 output = directory / ("output" + Path(filename).suffix)
                 await self.download(job, source["asset"], output)
-            elif (operation.startswith("image.") and self.comfy) or (operation == "audio.speech.v1" and self.speech):
+            elif (operation.startswith("image.") and self.comfy) or (operation == "audio.speech.v1" and self.speech) or (operation == "video.generate.v1" and self.video):
                 references = source["referenceAssets"]
                 if [a["id"] for a in references] != source["referenceAssetIds"]:
                     raise ValueError("参考素材顺序不一致")
@@ -74,7 +76,9 @@ class Worker:
                     nonlocal sequence
                     sequence += 1
                     await self.send("task.progress", {"progress": None, "stage": stage}, job, sequence=sequence)
-                if operation == "audio.speech.v1":
+                if operation == "video.generate.v1":
+                    output, filename = await self.video.process(operation, source, paths, directory, image_progress, job["attemptId"])
+                elif operation == "audio.speech.v1":
                     output, filename = await self.speech.process(operation, source, paths, directory, image_progress)
                 else:
                     output, filename = await self.comfy.process(operation, source, paths, directory, image_progress, job["attemptId"])
@@ -110,7 +114,9 @@ class Worker:
             await self.send("task.failed", {"message": str(error) if isinstance(error, ValueError) else "执行失败，请检查网络、编码和本地磁盘"}, job)
         finally:
             self.active.pop(job["attemptId"], None)
-            if self.comfy and self.comfy.poisoned:
+            if (self.comfy and self.comfy.poisoned) or (self.video and self.video.poisoned):
+                if self.comfy and self.video and self.comfy.endpoint_id == self.video.endpoint_id:
+                    self.comfy.poisoned = self.video.poisoned = True
                 await self.hello()
 
     async def download(self, job, asset, output):
@@ -130,8 +136,9 @@ class Worker:
     async def hello(self):
         image_profiles = self.comfy.public_profiles if self.comfy else []
         speech_profiles = self.speech.public_profiles if self.speech else []
-        capabilities = (["audio.speech.v1"] if speech_profiles else []) + self.capabilities + sorted({op for p in image_profiles for op in p["operations"]})
-        await self.send("hello", {"workerId": self.worker_id, "capabilities": capabilities, "imageProfiles": image_profiles, "speechProfiles": speech_profiles, "activeAttempts": list(self.active)})
+        video_profiles = self.video.public_profiles if self.video else []
+        capabilities = (["video.generate.v1"] if video_profiles else []) + (["audio.speech.v1"] if speech_profiles else []) + self.capabilities + sorted({op for p in image_profiles for op in p["operations"]})
+        await self.send("hello", {"workerId": self.worker_id, "capabilities": capabilities, "imageProfiles": image_profiles, "speechProfiles": speech_profiles, "videoProfiles": video_profiles, "activeAttempts": list(self.active)})
         for state in list(self.active.values()):
             if not state["inputs_ready"].is_set():
                 await self.send("task.accepted", job=state["job"])
@@ -196,6 +203,9 @@ class Worker:
             LOG.warning("Server 协议提示: %s", message["payload"].get("code"))
 
     async def start(self):
+        if self.video:
+            await self.video.check()
+            await self.video.recover(self.root)
         if self.speech:
             await self.speech.check()
         if self.comfy:
@@ -209,5 +219,7 @@ class Worker:
         for state in list(self.active.values()):
             self.cancel(state)
         await asyncio.gather(self.maintenance_task, *tasks, return_exceptions=True)
+        if self.video:
+            await self.video.http.aclose()
         if self.comfy:
             await self.comfy.http.aclose()

@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.7.0，配套 Studio 0.11.0 / Server 0.8.0，协议 2.0。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.8.0，配套 Studio 0.12.0 / Server 0.9.0，协议 2.0。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
 
 ## 启动与接入
 
@@ -100,3 +100,8 @@ uv run zhilume-worker --speech-config config/indextts.local.json --enable-speech
 `tests/speech_worker.py` 与服务端 speech-integration 测试是 CPU 测试夹具：替代上游推理、保留真实通信/文件传输/FFmpeg/受管 runner，不能用于发布或推理质量验收。正式 wheel 不包含 tests。上海二 A 已通过中文跟随音色、0.75/1/1.5 倍语速、独立情绪参考、情绪向量、文字情绪、真实取消及取消后新任务。结果经本机 Server 无入站监听上传/拉取与校验归档。参考素材使用官方演示样本；这不代表主观音色相似度、全部语言、长文本、OOM 或混合 ComfyUI/IndexTTS 显存切换已验收。
 
 官方依据：[固定版推理接口](https://github.com/index-tts/index-tts/blob/ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c/indextts/infer_v2_5.py)、[词表加载](https://github.com/index-tts/index-tts/blob/ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c/indextts/utils/tokenizer.py)。
+
+
+## H3 视频
+
+通过 `--enable-video-execution --video-config config/video.local.json` 显式启用，详见 [视频部署](deploy/video.md)。FL2VA 文本/首尾帧，Ref2VA 图片/视频/音频参考；与图片共用受管 ComfyUI 生命周期，与语音共用子进程取消。上海二 A 512×288、124 帧样本已完成真实推理与取消后恢复；不是全配置性能或质量认证。
