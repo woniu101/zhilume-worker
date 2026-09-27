@@ -83,7 +83,7 @@ uv run zhilume-worker --comfy-config config/comfy.local.json --enable-image-exec
 本机 WSL CPU/协议验收和上海二 A 云端 Worker 15/15 自动测试均已通过。云端网络、公共模型挂载及列出的真实 GPU 样本已验证；其他区域、镜像冷启动、长时故障恢复尚未覆盖，见 [部署说明](deploy/README.md)。
 
 
-## 可选 IndexTTS 2.5 执行器（真实 GPU 待验收）
+## 可选 IndexTTS 2.5 执行器（上海二 A 已实测）
 
 Worker 的轻量依赖不安装 PyTorch。另建官方 IndexTTS Python 环境，固定提交 `ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c`，按其锁文件安装推理依赖。将 `config/indextts.example.json` 复制为本地配置，填写 Python、源码目录、模型目录、FFmpeg 的绝对路径。不要将模型路径或命令交给 Studio 指定。
 
@@ -91,12 +91,12 @@ Worker 的轻量依赖不安装 PyTorch。另建官方 IndexTTS Python 环境，
 uv run zhilume-worker --speech-config config/indextts.local.json --enable-speech-execution
 ```
 
-部署启动器也支持 `ZHILUME_ENABLE_SPEECH=1` 和 `ZHILUME_SPEECH_CONFIG`。启用不会自动下载模型；主模型、tiktoken 词表、w2v-bert、BigVGAN、CAMPPlus 均须完整存在。需要文字情绪时额外准备 qwen0.6bemo4-merge，并设置 enableEmotionText=true。预检仅核对固定源码版本、配置与权重文件存在，不能证明 Python/CUDA 依赖、文件内容正确或推理成功。公共模型是否具备这些文件，须在实际上海二 A 实例核验后按准确路径软链接，当前不承诺零下载部署。
+部署启动器也支持 `ZHILUME_ENABLE_SPEECH=1` 和 `ZHILUME_SPEECH_CONFIG`。启用不会自动下载模型；主模型、tiktoken 词表、w2v-bert、BigVGAN、CAMPPlus 均须完整存在。需要文字情绪时额外准备 qwen0.6bemo4-merge，并设置 enableEmotionText=true。预检仅核对固定源码版本、配置与权重文件存在，不能证明 Python/CUDA 依赖、文件内容正确或推理成功。2026-09-27 已在上海二 A 核验这些公共模型，以 24 个准确文件软链接完成真实推理，未下载模型权重；其他区域仍须核对。文字情绪必须包含 chat_template.jinja 和分词文件，缺失或空文件时预检失败。完整安装步骤与清单见 [语音部署](deploy/speech.md)。
 
 每个任务启动独立受管 Python 进程：FFmpeg 截取/规范化参考，再调用官方 infer_v2_5.IndexTTS2，最后输出 24kHz 单声道 PCM16 WAV。语速映射 duration_factor=1/speed；跟随音色、情绪音频、情绪向量、文字情绪互斥。启动加载成本按真实阶段显示，不伪造百分比。结果归档后清理成功任务；失败日志保留于 attempts/<attemptId>/speech.log。取消和 15 分钟推理超时结束所持有子进程；Linux 另设父进程退出保护。生产 GPU 部署优先 Linux；Windows 仅完成普通取消测试，异常强杀整棵进程树仍需独立验收。
 
 共享 GPU 同时启用 ComfyUI 与 IndexTTS 时，Worker 单并发不等于显存已释放；ComfyUI 缓存可能占用显存。首次验收只启用语音执行器，随后再验证混合模型切换，不假设显存自动调度。普通视频截取和抽音轨仍不依赖本执行器。
 
-`tests/speech_worker.py` 与服务端 speech-integration 测试是 CPU 测试夹具：替代上游推理、保留真实通信/文件传输/FFmpeg/受管 runner，不能用于发布或推理质量验收。正式 wheel 不包含 tests。真实模型效果、情绪权重默认值、吞吐和 OOM 行为待通知用户后在上海二 A 验收。
+`tests/speech_worker.py` 与服务端 speech-integration 测试是 CPU 测试夹具：替代上游推理、保留真实通信/文件传输/FFmpeg/受管 runner，不能用于发布或推理质量验收。正式 wheel 不包含 tests。上海二 A 已通过中文跟随音色、0.75/1/1.5 倍语速、独立情绪参考、情绪向量、文字情绪、真实取消及取消后新任务。结果经本机 Server 无入站监听上传/拉取与校验归档。参考素材使用官方演示样本；这不代表主观音色相似度、全部语言、长文本、OOM 或混合 ComfyUI/IndexTTS 显存切换已验收。
 
 官方依据：[固定版推理接口](https://github.com/index-tts/index-tts/blob/ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c/indextts/infer_v2_5.py)、[词表加载](https://github.com/index-tts/index-tts/blob/ee40fa7d6c6b8a2c7f06105f9f1e65775b74868c/indextts/utils/tokenizer.py)。

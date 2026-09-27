@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from zhilume_worker.speech import SpeechExecutor, public_profile, validate_input
+from zhilume_worker.speech import SpeechExecutor, public_profile, validate_input, MODEL
 from zhilume_worker.speech_runner import infer_kwargs
 
 
@@ -42,6 +42,31 @@ class SpeechTest(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             await executor.check()
         self.assertEqual(executor.public_profiles, [])
+
+    async def test_text_emotion_requires_nonempty_chat_template_before_advertising(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            files = ['indextts/infer_v2_5.py', 'config.yaml', 'gpt.pth', 's2mel.pth', 'codec.pth',
+                     'wav2vec2bert_stats.pt', 'feat1.pt', 'feat2.pt', 'multilingual_zh_ja_yue_char_del.tiktoken',
+                     'hf_cache/w2v-bert-2.0/config.json', 'hf_cache/w2v-bert-2.0/model.safetensors',
+                     'hf_cache/bigvgan/config.json', 'hf_cache/bigvgan/bigvgan_generator.pt', 'hf_cache/campplus_cn_common.bin',
+                     'qwen0.6bemo4-merge/config.json', 'qwen0.6bemo4-merge/model.safetensors',
+                     'qwen0.6bemo4-merge/tokenizer.json', 'qwen0.6bemo4-merge/tokenizer_config.json']
+            for name in files:
+                p = root / name; p.parent.mkdir(parents=True, exist_ok=True); p.write_text('fixture')
+            config = dict(python=sys.executable, ffmpeg=sys.executable, repository=str(root), modelDirectory=str(root), enableEmotionText=True)
+            executor = SpeechExecutor(config)
+            with patch('subprocess.check_output', return_value=MODEL['upstreamRevision'].encode()):
+                with self.assertRaisesRegex(ValueError, 'chat_template.jinja'):
+                    await executor.check()
+                self.assertEqual(executor.public_profiles, [])
+                template = root / 'qwen0.6bemo4-merge/chat_template.jinja'
+                template.write_text('')
+                with self.assertRaisesRegex(ValueError, 'chat_template.jinja'):
+                    await executor.check()
+                template.write_text('{{ messages }}')
+                await executor.check()
+                self.assertIn('text', executor.public_profiles[0]['emotionModes'])
 
     async def test_cancel_reaps_owned_child_before_returning(self):
         with tempfile.TemporaryDirectory() as root:

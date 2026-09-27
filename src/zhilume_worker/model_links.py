@@ -11,16 +11,16 @@ def relative(value):
     return path
 
 
-def plan_links(manifest, roots, comfy_root):
+def plan_links(manifest, roots, destination_root):
     if not isinstance(manifest.get("links"), list) or not 1 <= len(manifest["links"]) <= 64:
         raise ValueError("模型清单需要 1–64 个链接")
-    destination_root = (comfy_root / "models").resolve()
+    destination_root = destination_root.resolve()
     links, destinations = [], set()
     for entry in manifest["links"]:
         destination = destination_root / relative(entry["target"])
         # Check parent rather than destination so an existing correct symlink is allowed.
         if not destination.parent.resolve().is_relative_to(destination_root) or destination in destinations:
-            raise ValueError("链接目标重复或离开 ComfyUI 模型目录")
+            raise ValueError("链接目标重复或离开指定模型目录")
         destinations.add(destination)
         candidates = [root / relative(source) for root in roots for source in entry["sources"]]
         matches = sorted({p.resolve() for p in candidates if p.is_file() and p.stat().st_size > 0})
@@ -48,5 +48,4 @@ def apply_links(links):
         for target in reversed(created):
             target.unlink()  # Roll back only symlinks created by this call.
         raise
-
 

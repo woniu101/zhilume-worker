@@ -20,6 +20,7 @@ class ModelLinksTests(unittest.TestCase):
             source = model / "repo/model.safetensors"; source.write_bytes(b"test-weight-fixture")
             links = plan_links(manifest, [model], comfy)
             self.assertEqual(links[0]["status"], "ready")
+            self.assertEqual(Path(links[0]["target"]), comfy / 'diffusion_models/model.safetensors')
             try:
                 apply_links(links)
             except OSError as error:
@@ -35,4 +36,3 @@ class ModelLinksTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), b"user-file")
             with self.assertRaises(ValueError):
                 plan_links({"links": [{"target": "../escape", "sources": ["repo/model.safetensors"]}]}, [model], comfy)
-

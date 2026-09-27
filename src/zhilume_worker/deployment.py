@@ -1,4 +1,4 @@
-"""Prepare a dedicated ComfyUI installation without loading weights or starting GPU jobs."""
+"""Prepare explicit model links and services without loading weights or starting GPU jobs."""
 import argparse
 import asyncio
 import json
@@ -49,17 +49,20 @@ def main():
     parser = argparse.ArgumentParser(description="准备模型软链接和只读连通检查；不下载权重、不提交生成")
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--model-root", type=Path, action="append")
-    parser.add_argument("--comfy-root", type=Path)
+    destination = parser.add_mutually_exclusive_group()
+    destination.add_argument("--comfy-root", type=Path, help="ComfyUI 根目录，链接放入其 models 子目录")
+    destination.add_argument("--destination", type=Path, help="独立推理器的模型目录，如 IndexTTS modelDirectory")
     parser.add_argument("--apply-links", action="store_true")
     parser.add_argument("--worker", help="可选 Worker 地址；密钥由 ZHILUME_WORKER_TOKEN 环境变量传入")
     parser.add_argument("--comfy-config", type=Path)
     args = parser.parse_args()
-    if bool(args.manifest) != bool(args.comfy_root) or (args.apply_links and not args.manifest):
-        parser.error("模型链接需要同时提供 --manifest 和 --comfy-root")
+    target = args.destination or (args.comfy_root / 'models' if args.comfy_root else None)
+    if bool(args.manifest) != bool(target) or (args.apply_links and not args.manifest):
+        parser.error("模型链接需要 --manifest 和 --comfy-root / --destination")
     result = {"python": platform.python_version(), "platform": platform.system(), "ffmpegAvailable": bool(shutil.which("ffmpeg")), "gpuJobsSubmitted": False}
     try:
         if args.manifest:
-            links = plan_links(json.loads(args.manifest.read_text("utf-8")), args.model_root or [Path("/model"), Path("/models")], args.comfy_root)
+            links = plan_links(json.loads(args.manifest.read_text("utf-8")), args.model_root or [Path("/model"), Path("/models")], target)
             result["links"] = links
             if args.apply_links:
                 apply_links(links)

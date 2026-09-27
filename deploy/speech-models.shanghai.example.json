@@ -1,0 +1,148 @@
+{
+  "links": [
+    {
+      "target": "config.yaml",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/config.yaml"
+      ]
+    },
+    {
+      "target": "gpt.pth",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/gpt.pth"
+      ]
+    },
+    {
+      "target": "s2mel.pth",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/s2mel.pth"
+      ]
+    },
+    {
+      "target": "codec.pth",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/codec.pth"
+      ]
+    },
+    {
+      "target": "wav2vec2bert_stats.pt",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/wav2vec2bert_stats.pt"
+      ]
+    },
+    {
+      "target": "feat1.pt",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/feat1.pt"
+      ]
+    },
+    {
+      "target": "feat2.pt",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/feat2.pt"
+      ]
+    },
+    {
+      "target": "multilingual_zh_ja_yue_char_del.tiktoken",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/multilingual_zh_ja_yue_char_del.tiktoken"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/config.json",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/config.json"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/generation_config.json",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/generation_config.json"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/model.safetensors",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/model.safetensors"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/tokenizer.json",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/tokenizer.json"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/tokenizer_config.json",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/tokenizer_config.json"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/vocab.json",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/vocab.json"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/merges.txt",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/merges.txt"
+      ]
+    },
+    {
+      "target": "hf_cache/w2v-bert-2.0/config.json",
+      "sources": [
+        "HuggingFace/facebook/w2v-bert-2.0/config.json"
+      ]
+    },
+    {
+      "target": "hf_cache/w2v-bert-2.0/preprocessor_config.json",
+      "sources": [
+        "HuggingFace/facebook/w2v-bert-2.0/preprocessor_config.json"
+      ]
+    },
+    {
+      "target": "hf_cache/w2v-bert-2.0/model.safetensors",
+      "sources": [
+        "HuggingFace/facebook/w2v-bert-2.0/model.safetensors"
+      ]
+    },
+    {
+      "target": "hf_cache/bigvgan/config.json",
+      "sources": [
+        "HuggingFace/nvidia/bigvgan_v2_22khz_80band_256x/config.json"
+      ]
+    },
+    {
+      "target": "hf_cache/bigvgan/bigvgan_generator.pt",
+      "sources": [
+        "HuggingFace/nvidia/bigvgan_v2_22khz_80band_256x/bigvgan_generator.pt"
+      ]
+    },
+    {
+      "target": "hf_cache/campplus_cn_common.bin",
+      "sources": [
+        "ModelScope/gongjy/campplus/campplus_cn_common.pt"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/chat_template.jinja",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/chat_template.jinja"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/added_tokens.json",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/added_tokens.json"
+      ]
+    },
+    {
+      "target": "qwen0.6bemo4-merge/special_tokens_map.json",
+      "sources": [
+        "ModelScope/IndexTeam/IndexTTS-2.5/qwen0.6bemo4-merge/special_tokens_map.json"
+      ]
+    }
+  ]
+}

@@ -75,9 +75,11 @@ class SpeechExecutor:
             required = ['config.yaml', 'gpt.pth', 's2mel.pth', 'codec.pth', 'wav2vec2bert_stats.pt', 'feat1.pt', 'feat2.pt', 'multilingual_zh_ja_yue_char_del.tiktoken',
                         'hf_cache/w2v-bert-2.0/config.json', 'hf_cache/bigvgan/config.json', 'hf_cache/campplus_cn_common.bin']
             if self.config.get('enableEmotionText'):
-                required += ['qwen0.6bemo4-merge/config.json']
-            if any(not (models / name).is_file() for name in required):
-                raise ValueError('IndexTTS 主模型或辅助模型不完整；只读检查不会自动下载')
+                required += ['qwen0.6bemo4-merge/config.json', 'qwen0.6bemo4-merge/tokenizer.json',
+                             'qwen0.6bemo4-merge/tokenizer_config.json', 'qwen0.6bemo4-merge/chat_template.jinja']
+            missing = [name for name in required if not (models / name).is_file() or (models / name).stat().st_size == 0]
+            if missing:
+                raise ValueError('IndexTTS 模型文件缺失或为空：' + ', '.join(missing) + '；只读检查不会自动下载')
             for folder in ['hf_cache/w2v-bert-2.0', 'hf_cache/bigvgan'] + (['qwen0.6bemo4-merge'] if self.config.get('enableEmotionText') else []):
                 if not any(p.is_file() for pattern in ('*.bin', '*.safetensors', '*.pth', '*.pt') for p in (models / folder).glob(pattern)):
                     raise ValueError('IndexTTS 辅助模型只有配置，没有权重')
