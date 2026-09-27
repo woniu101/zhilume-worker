@@ -109,4 +109,4 @@ uv run zhilume-worker --speech-config config/indextts.local.json --enable-speech
 
 通过 `--enable-video-execution --video-config config/video.local.json` 显式启用，详见 [视频部署](deploy/video.md)。FL2VA 文本/首尾帧，Ref2VA 图片/视频/音频参考；与图片共用受管 ComfyUI 生命周期，与语音共用子进程取消。上海二 A 512×288、124 帧样本已完成真实推理与取消后恢复；不是全配置性能或质量认证。
 
-标准推理环境安装见 [安装说明](deploy/standard-install.md)。0.11 增加候选依赖锁、安装前检查、阶段状态及取消；干净环境 GPU 验收仍待完成。
+标准推理环境安装见 [安装说明](deploy/standard-install.md)。0.11 增加候选依赖锁、安装前检查、阶段状态及取消；标准安装的新独立环境已通过上海二 A Qwen / IndexTTS / H3 FL2VA GPU 样本验收，详见安装说明中的范围与网络限制。
