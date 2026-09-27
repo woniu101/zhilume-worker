@@ -26,12 +26,21 @@ def public_profile(c):
         if type(value) is not int or not low <= value <= high: raise ValueError(f'{key} 超出允许范围')
         limits[key] = value
     if limits['maxOutputTokens'] >= limits['contextSize']: raise ValueError('输出预算须小于上下文容量')
+    reasoning = c.get('reasoningMode', 'off')
+    if reasoning not in ('off', 'auto'): raise ValueError('思考模式须为 off 或 auto')
     p = sign(dict(modelId=c['modelId'], backend='llama.cpp', workflowRevision='language.llamacpp.v1',
         operations=['text.generate.v1', 'prompt.optimize.v1'], capabilities=['text'], maxImages=0,
-        outputFormats=['txt'], validation='unverified', **limits), c.get('identity'))
+        outputFormats=['txt'], reasoningMode=reasoning, validation='unverified', **limits), c.get('identity'))
     for key in ('model', 'binary'):
         if not re.fullmatch(r'sha256:[a-f0-9]{64}', p['identity']['artifacts'].get(key, '')):
             raise ValueError('模型与 llama-server 程序都必须提供实际 SHA256 标识')
+    runtime = c.get('runtimeFiles', {})
+    if not isinstance(runtime, dict) or len(runtime) > 64 or any(not isinstance(k, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,120}', k) or not isinstance(v, str) for k, v in runtime.items()):
+        raise ValueError('runtimeFiles 须为运行库名称与本机路径的映射')
+    if set('runtime.' + k for k in runtime) != {k for k in p['identity']['artifacts'] if k.startswith('runtime.')}:
+        raise ValueError('运行库路径与 identity.artifacts 中 runtime 标识须一一对应')
+    if any(not re.fullmatch(r'sha256:[a-f0-9]{64}', p['identity']['artifacts']['runtime.' + k]) for k in runtime):
+        raise ValueError('运行库须提供实际 SHA256 标识')
     return p
 
 
@@ -46,9 +55,11 @@ class LanguageExecutor:
     def public_profiles(self): return [self.profile] if self.ready else []
 
     async def check(self):
+        self.ready = False
+        self.stamps.clear()
         def verify():
-            for key, artifact in [('binary', 'binary'), ('modelFile', 'model')]:
-                p = Path(self.config.get(key, ''))
+            for key, artifact, path in self.files():
+                p = Path(path)
                 if not p.is_absolute() or not p.is_file(): raise ValueError(f'{key} 文件不存在或软链接失效')
                 if key == 'binary' and not os.access(p, os.X_OK): raise ValueError('llama-server 缺少执行权限')
                 with p.open('rb') as stream:
@@ -59,6 +70,10 @@ class LanguageExecutor:
                 st = p.stat(); self.stamps[key] = (st.st_size, st.st_mtime_ns)
         await asyncio.to_thread(verify)
         self.ready = True
+
+    def files(self):
+        return [('binary', 'binary', self.config.get('binary', '')), ('modelFile', 'model', self.config.get('modelFile', ''))] + [
+            ('runtime.' + key, 'runtime.' + key, path) for key, path in self.config.get('runtimeFiles', {}).items()]
 
     async def release(self):
         p = self.process_handle
@@ -86,8 +101,8 @@ class LanguageExecutor:
         if not isinstance(source.get('text'), str) or not 0 < len(source['text'].strip()) <= self.profile['maxInputCharacters']: raise ValueError('语言模型输入长度无效')
         if not isinstance(source.get('systemPrompt'), str) or not 0 < len(source['systemPrompt']) <= 20000: raise ValueError('提示词规则无效')
         if sys.platform != 'linux': raise ValueError('语言模型推理当前仅支持 Linux / WSL2')
-        for key in ('binary', 'modelFile'):
-            st = Path(self.config[key]).stat()
+        for key, _, path in self.files():
+            st = Path(path).stat()
             if self.stamps.get(key) != (st.st_size, st.st_mtime_ns): raise ValueError('程序或模型已变更，请重新检查执行规格')
         port = self.config.get('port', 8190)
         with socket.socket() as probe:
@@ -120,6 +135,7 @@ class LanguageExecutor:
                     await progress('生成文本')
                     async with client.stream('POST', '/v1/chat/completions', timeout=self.config.get('timeoutSeconds', 600), json={
                         'model': 'zhilume-language', 'stream': False, 'max_tokens': self.profile['maxOutputTokens'],
+                        **({'chat_template_kwargs': {'enable_thinking': False}} if self.profile['reasoningMode'] == 'off' else {}),
                         'messages': [{'role': 'system', 'content': source['systemPrompt']}, {'role': 'user', 'content': source['text']}],
                     }) as r:
                         if r.status_code != 200: raise ValueError(f'语言模型服务返回 HTTP {r.status_code}')
@@ -129,6 +145,7 @@ class LanguageExecutor:
                             if len(raw) > 256000: raise ValueError('语言模型响应过大')
                     result = json.loads(raw); choice = result['choices'][0]
                     content = choice.get('message', {}).get('content')
+                    if choice.get('finish_reason') == 'length': raise ValueError('语言模型输出达到 Token 上限；请缩短请求、关闭思考或调整执行规格的输出预算')
                     if choice.get('finish_reason') != 'stop' or not isinstance(content, str) or not 0 < len(content.strip()) <= 12000: raise ValueError('语言模型输出不完整或过大')
                     output = directory / 'language.txt'; output.write_text(content, 'utf-8')
                     return output, '语言模型结果.txt'

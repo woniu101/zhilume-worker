@@ -4,6 +4,7 @@
   "modelId": "",
   "port": 8190,
   "device": "0",
+  "reasoningMode": "off",
   "contextSize": 8192,
   "maxInputCharacters": 6000,
   "maxOutputTokens": 1024,

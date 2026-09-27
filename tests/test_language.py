@@ -17,6 +17,7 @@ class LanguageTests(unittest.IsolatedAsyncioTestCase):
         c = config(); p = public_profile(c)
         self.assertEqual(p, public_profile({**c,'binary':'/elsewhere/bin','modelFile':'/elsewhere/model','device':'1'}))
         self.assertNotEqual(p['profileId'], public_profile({**c,'contextSize':4096})['profileId'])
+        self.assertNotEqual(p['profileId'], public_profile({**c,'reasoningMode':'auto'})['profileId'])
         with self.assertRaises(ValueError): public_profile({**c,'maxOutputTokens':9000})
         self.assertEqual(p['capabilities'], ['text'])
 
@@ -33,6 +34,21 @@ class LanguageTests(unittest.IsolatedAsyncioTestCase):
             await e.check(); self.assertEqual(len(e.public_profiles),1)
             model.unlink()
             with self.assertRaisesRegex(ValueError,'不存在'): await e.check()
+            self.assertFalse(e.ready)
+
+    async def test_runtime_libraries_are_checked_and_paths_do_not_change_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp)/'libllama.so';p.write_bytes(b'backend');c=config()
+            c['runtimeFiles']={'llama':str(p)}
+            with self.assertRaisesRegex(ValueError,'一一对应'): public_profile(c)
+            c['identity']['artifacts']['runtime.llama']='sha256:'+hashlib.sha256(p.read_bytes()).hexdigest()
+            first=public_profile(c)
+            self.assertEqual(first,public_profile({**c,'runtimeFiles':{'llama':'/other/libllama.so'}}))
+            binary=Path(tmp)/'llama-server';binary.write_bytes(b'launcher');binary.chmod(0o700)
+            model=Path(tmp)/'m.gguf';model.write_bytes(b'GGUFfixture');c.update(binary=str(binary),modelFile=str(model))
+            for key,path in [('binary',binary),('model',model)]:c['identity']['artifacts'][key]='sha256:'+hashlib.sha256(path.read_bytes()).hexdigest()
+            e=LanguageExecutor(c);await e.check();p.write_bytes(b'changed-backend')
+            with self.assertRaisesRegex(ValueError,'摘要'):await e.check()
 
     async def test_release_fails_closed_if_vram_unknown_or_still_used(self):
         e = LanguageExecutor(config())
@@ -53,12 +69,14 @@ class LanguageTests(unittest.IsolatedAsyncioTestCase):
             c=config();c.update(binary=str(binary),modelFile=str(model))
             c['identity']['artifacts']={k:'sha256:'+hashlib.sha256(p.read_bytes()).hexdigest() for k,p in [('binary',binary),('model',model)]}
             e=LanguageExecutor(c);await e.check()
-            started=asyncio.Event();hold=False
+            started=asyncio.Event();hold=False;finish='stop'
             async def handler(request):
                 if request.url.path == '/health': return httpx.Response(200,json={'status':'ok'})
+                import json
+                self.assertEqual(json.loads(request.content)['chat_template_kwargs'], {'enable_thinking':False})
                 started.set()
                 if hold: await asyncio.sleep(60)
-                return httpx.Response(200,json={'choices':[{'finish_reason':'stop','message':{'content':'中文结果'}}]})
+                return httpx.Response(200,json={'choices':[{'finish_reason':finish,'message':{'content':'中文结果'}}]})
             client_type=httpx.AsyncClient
             def client(**kwargs): return client_type(**kwargs,transport=httpx.MockTransport(handler))
             process=SimpleNamespace(pid=12345,returncode=None,wait=AsyncMock(return_value=0))
@@ -67,6 +85,9 @@ class LanguageTests(unittest.IsolatedAsyncioTestCase):
                 output,_=await e.process('text.generate.v1',source,[],root,AsyncMock())
                 self.assertEqual(output.read_text('utf-8'),'中文结果');self.assertIsNone(e.process_handle)
                 self.assertTrue(spawn.call_args.kwargs['start_new_session']);self.assertTrue(kill.called)
+                finish='length'
+                with self.assertRaisesRegex(ValueError,'Token 上限'): await e.process('text.generate.v1',source,[],root,AsyncMock())
+                self.assertIsNone(e.process_handle);finish='stop'
                 hold=True;started.clear()
                 task=asyncio.create_task(e.process('text.generate.v1',source,[],root,AsyncMock()))
                 await started.wait();task.cancel()

@@ -29,6 +29,14 @@ zhilume-worker --state /var/lib/zhilume-worker --executor language --executor-ac
 
 模型、程序 SHA256、量化、工作流修订、上下文与输入输出限制参与规格摘要；路径、端口、GPU 序号不参与。修改程序或模型后必须重新检查。不自动更新二进制、不自动下载权重、不按模型名称静默替换。
 
-本轮通过控制逻辑、文件校验、取消及 Server/Studio 协议测试；**尚未执行 llama.cpp 真实 GPU 推理**。Qwen3.5-9B 仍是候选，需单独核对 GGUF 来源、固定构建与公共模型库供给，不将 safetensors 模型直接当作 GGUF。
+`reasoningMode=off|auto` 默认为 off，适合创作与提示词优化；auto 沿用模型模板默认值。该选项参与执行规格匹配。输出 Token 预算覆盖模型输出，默认开启思考的模型可能在给出正文之前耗尽预算；达到上限会明确失败，不归档截断文本。
+
+llama.cpp 共享库发布包的 `llama-server` 可能仅是启动器。此类部署须通过高级 JSON 配置 `runtimeFiles`（逻辑组件名到本机绝对路径），并在 `identity.artifacts` 提供一一对应的 `runtime.<组件名>` SHA256。检查核对实际库文件内容，运行前检查文件是否变更；运行库路径不进入公开规格，组件摘要参与匹配。静态构建可省略。声明了库摘要却未提供校验路径会被拒绝。
+
+2026-09-27 已在上海二 A 的 5090 上通过 Qwen3.5-9B BF16 / llama.cpp b11218 的真实文本、Qwen/H3 提示词优化、取消排队、显存释放及图片执行器切换。Worker 0.12.1 新增运行库校验与明确思考配置。此结果仅适用于受测组合，不代表任意 GGUF、其他量化、视觉理解或其他平台已验证。
+
+受测模型来自云平台公共 Safetensors 目录，在云端使用固定 llama.cpp 转换脚本产生单文件 BF16 GGUF（约 18.4 GB），未重新下载权重。llama.cpp 不能直接把原 Safetensors 目录当成 GGUF；若平台已有经过核验的 GGUF，才可直接配置或链接。转换及依赖准备属于显式部署操作，不能在 Worker 接单时自动触发。转换工具复用了已有 Torch 2.8.0 / Transformers 4.57.6，与 Worker 核心分离。
+
+复测固定程序来源：[llama.cpp b11218](https://github.com/ggml-org/llama.cpp/releases/tag/b11218)。模型来源：[Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B)。转换命令为 `python convert_hf_to_gguf.py /path/to/Qwen3.5-9B --outfile /path/to/Qwen3.5-9B-BF16.gguf --outtype bf16`；具体依赖须在独立转换环境检查。本次未实现语言执行器的一键安装或发布云镜像。
 
 接口依据：[llama.cpp 官方 Server 文档](https://github.com/ggml-org/llama.cpp/tree/master/tools/server)。

@@ -702,6 +702,8 @@ export function EnvironmentPanel({
               {[["port","本地服务端口"],["contextSize","上下文容量"],["maxInputCharacters","输入字符上限"],["maxOutputTokens","输出 Token 上限"]].map(([k,label])=><Field key={k} label={label} type="number" value={config[k]} change={v=>set(k,v)}/>)}</div>
               <div className="form-grid">{[["revision","模型版本"],["quantization","量化规格"]].map(([k,label])=><Field key={k} label={label} value={config.identity?.[k]} change={v=>set("identity",{...config.identity,[k]:v})}/>)}
               {["model","binary"].map(k=><Field key={k} label={k === "model" ? "模型 SHA256 标识" : "程序 SHA256 标识"} value={config.identity?.artifacts?.[k]} change={v=>set("identity",{...config.identity,artifacts:{...config.identity?.artifacts,[k]:v}})}/>)}</div>
+              <p className="description">共享库构建需在高级 JSON 中填写 runtimeFiles 路径及对应 runtime.* SHA256，避免只校验启动器。已配置 {Object.keys(config.runtimeFiles || {}).length} 个运行库；这些路径不参与跨机器模型匹配。</p>
+              <label>思考模式<select aria-label="思考模式" value={config.reasoningMode || "off"} onChange={e=>set("reasoningMode",e.target.value)}><option value="off">关闭（适合创作与提示词优化）</option><option value="auto">使用模型默认值</option></select></label>
             </> : kind === "speech" ? (
               <>
                 <div className="form-grid">
