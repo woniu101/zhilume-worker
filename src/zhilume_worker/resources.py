@@ -24,9 +24,21 @@ class ResourceLease:
         self.ids, self.files = sorted(set(resource_ids)), []
         self.owner, self.recovery, self.markers = owner, recovery, []
 
+    @staticmethod
+    def directory():
+        return Path(os.environ.get('ZHILUME_RESOURCE_LOCK_DIR', '/tmp/zhilume-gpu-locks' if os.name != 'nt' else str(Path(tempfile.gettempdir()) / 'zhilume-gpu-locks')))
+
+    @classmethod
+    def quarantine_owners(cls, resource_ids):
+        owners = set()
+        for resource in resource_ids:
+            marker = cls.directory() / (hashlib.sha256(resource.encode()).hexdigest() + '.quarantine')
+            if marker.exists(): owners.add(marker.read_text())
+        return owners
+
     async def acquire(self):
         # All local Workers must share this host directory; containers mount it from host.
-        directory = Path(os.environ.get('ZHILUME_RESOURCE_LOCK_DIR', '/tmp/zhilume-gpu-locks' if os.name != 'nt' else str(Path(tempfile.gettempdir()) / 'zhilume-gpu-locks')))
+        directory = self.directory()
         directory.mkdir(parents=True, exist_ok=True)
         try:
             for resource in self.ids:

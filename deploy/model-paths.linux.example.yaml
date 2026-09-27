@@ -1,0 +1,5 @@
+zhilume:
+  base_path: /srv/zhilume/models
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae

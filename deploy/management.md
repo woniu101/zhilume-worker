@@ -1,5 +1,7 @@
 # Worker 0.9 安装与本机管理
 
+> 当前版本为 0.10。安装入口、版本目录和受管服务以 [通用部署文档](portable.md) 为准。本页保留 0.9 的管理权限与验收记录，旧安装命令不再作为当前操作入口。
+
 目标系统为 Linux / WSL2。Windows 可运行控制服务及 CPU 测试，但 Windows 原生 GPU 推理未纳入本版验收。部署机器不需要 Node.js；React 静态页面已放入 wheel，由一个 FastAPI/Uvicorn 进程提供。
 
 ## 分离程序和数据

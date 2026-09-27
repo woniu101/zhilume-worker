@@ -75,7 +75,27 @@ def attach_management(app, worker, credentials, get_owner, unbind):
         return {'version': version('zhilume-worker'), 'workerId': worker.worker_id, 'name': worker.args.name, 'serviceOnline': True,
                 'bound': bool(get_owner()), 'serverConnected': bool(worker.socket), 'gpus': await hardware(), 'disk': {'total': disk.total, 'free': disk.free},
                 'tasks': [dict(jobId=s['job']['jobId'], cancelling=s.get('cancelling', False)) for s in worker.active.values()],
-                'resources': worker.resource_ids, 'resourceQuarantined': bool(worker.quarantined_lease), 'executors': worker.manager.snapshot()}
+                'resources': worker.resource_ids, 'resourceQuarantined': bool(worker.quarantined_lease), 'executors': worker.manager.snapshot(),
+                'runtimes': worker.manager.runtimes.snapshot(), 'runtimeConfigError': worker.manager.runtimes.error}
+
+    @app.put('/management/api/runtimes/{runtime_id}')
+    async def configure_runtime(runtime_id: str, request: Request):
+        auth(request)
+        from .runtimes import validate_runtime
+        body = await request.json()
+        try:
+            worker.manager.runtimes.validate_id(runtime_id)
+            validate_runtime(body)
+        except ValueError as error: raise HTTPException(400, str(error))
+        return launch('runtime:configure', lambda: worker.manager.configure_runtime(runtime_id, body))
+
+    @app.post('/management/api/runtimes/{runtime_id}/{action}')
+    async def runtime_action(runtime_id: str, action: str, request: Request):
+        auth(request)
+        if runtime_id not in worker.manager.runtimes.entries or action not in ('check', 'start', 'stop'):
+            raise HTTPException(404, '未知运行环境或操作')
+        body = await request.json()
+        return launch('runtime:' + action, lambda: worker.manager.runtime_action(runtime_id, action, body.get('policy', 'wait')))
 
     @app.get('/management/api/operations')
     async def operation_status(request: Request):
@@ -158,7 +178,9 @@ def attach_management(app, worker, credentials, get_owner, unbind):
         for kind in ('image','speech','video'):
             path = worker.root / 'logs' / (kind + '.jsonl')
             if path.exists(): logs[kind] = path.read_text('utf-8')[-16000:]
-        return redact({'workerId': worker.worker_id, 'executors': worker.manager.snapshot(), 'logs': logs, 'resourceQuarantined': bool(worker.quarantined_lease)})
+        return redact({'workerId': worker.worker_id, 'executors': worker.manager.snapshot(),
+                       'runtimes': worker.manager.runtimes.snapshot(), 'runtimeConfigError': worker.manager.runtimes.error,
+                       'logs': logs, 'resourceQuarantined': bool(worker.quarantined_lease)})
 
     static = Path(__file__).parent / 'web'
     if static.exists():

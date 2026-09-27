@@ -74,6 +74,7 @@ class ManagementTest(unittest.TestCase):
         config=fixture_config(json.loads((Path(__file__).parent.parent/'config/comfy.example.json').read_text('utf-8')))
         one=profiles(config)[0]['public']
         config['url']='http://different-host:8188'
+        config['runtimeId']='another-machine-local-service'
         config['profiles'][0]['models']={k:'other-folder/'+v for k,v in config['profiles'][0]['models'].items()}
         two=profiles(config)[0]['public'];self.assertEqual(one['profileId'],two['profileId'])
         config['profiles'][0]['identity']['quantization']='different-format'

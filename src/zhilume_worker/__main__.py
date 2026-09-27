@@ -19,6 +19,8 @@ def main():
     parser.add_argument("--show-management-token", action="store_true")
     parser.add_argument("--executor-action", choices=["configure", "check", "enable", "disable", "diagnose"])
     parser.add_argument("--executor", choices=["image", "speech", "video"])
+    parser.add_argument("--runtime", help="托管运行环境名称")
+    parser.add_argument("--runtime-action", choices=["configure", "check", "start", "stop"])
     parser.add_argument("--config-file")
     parser.add_argument("--stop-policy", choices=["wait", "cancel"], default="wait")
     parser.add_argument("--show-token", action="store_true", help="显示本机 Worker 接入密钥并退出")
@@ -40,6 +42,20 @@ def main():
     from .management import admin_identity
     if args.show_management_token:
         print(admin_identity(Path(args.state))); return
+    if args.runtime_action:
+        # Owned long-running processes require a running control service; the CLI
+        # does not leave detached inference processes behind when it exits.
+        import httpx
+        if not args.runtime: parser.error('--runtime-action 需要 --runtime')
+        host = '127.0.0.1' if args.host in ('0.0.0.0', '::') else args.host
+        with httpx.Client(base_url=f'http://{host}:{args.port}/management/api', headers={'Authorization': 'Bearer ' + admin_identity(Path(args.state))}, timeout=15, trust_env=False) as client:
+            if args.runtime_action == 'configure':
+                if not args.config_file: parser.error('configure 需要 --config-file')
+                response = client.put(f'/runtimes/{args.runtime}', json=json.loads(Path(args.config_file).read_text('utf-8')))
+            else:
+                response = client.post(f'/runtimes/{args.runtime}/{args.runtime_action}', json={'policy': args.stop_policy})
+            response.raise_for_status(); print(json.dumps(response.json(), ensure_ascii=False))
+        return
     if args.executor_action:
         from .worker import Worker
         from .resources import StateLock

@@ -34,7 +34,12 @@ async def install(kind, directory, python, log):
         for command in spec['commands']:
             cwd=Path(spec['source']) if command[0]=='uv' else root
             await run_child(command,cwd,log,timeout=3600,env={'GIT_LFS_SKIP_SMUDGE':'1','UV_PROJECT_ENVIRONMENT':str(root/'venv'),'HF_HUB_OFFLINE':'1'})
-        marker.write_text(json.dumps({**spec,'state':'installed-unchecked'},indent=2))
+        # Record what was actually resolved. This is provenance, not a claim
+        # that an untested CUDA/Torch dependency combination is GPU-certified.
+        interpreter = root/'venv/bin/python'
+        freeze = [str(interpreter), '-m', 'pip', 'freeze'] if kind != 'speech' else ['uv', 'pip', 'freeze', '--python', str(interpreter)]
+        await run_child(freeze, root, root/'installed-requirements.txt', timeout=60)
+        marker.write_text(json.dumps({**spec,'state':'installed-unchecked','dependencyInventory':'installed-requirements.txt'},indent=2))
         return {'state':'installed-unchecked','directory':str(root),'next':'配置模型路径并显式检查；未启动推理'}
     except BaseException:
         marker.write_text(json.dumps({**spec,'state':'incomplete'},indent=2));raise

@@ -1,5 +1,7 @@
 # 优云智算部署准备
 
+> 新部署请先使用 [0.10 通用 Linux / WSL2 部署](portable.md)。本页是平台模型准备与旧版本验收记录，路径和命令需结合当前部署配置；不能将旧验收视为新托管模式已通过。
+
 **当前 Worker 0.9 的安装、管理、权限和镜像基线见 [管理部署说明](management.md)。下文云端记录是旧版模型能力验收，不能替代 0.9 资源释放与控制接口的 GPU 验收。**
 
 优先上海二 A，华北二 A 后续验证。2026-09-26 已创建上海二 A RTX 5090 实例，完成真实部署、推理、素材传输、取消及 Server 重连验收。固定环境见 [comfy-runtime.json](comfy-runtime.json)，完整样本报告见 [Server 云端验收记录](https://github.com/woniu101/zhilume-server/blob/main/docs/cloud-acceptance-2026-09-26.md)。部署到专用目录，不修改其他项目的 ComfyUI 或 Python 环境。

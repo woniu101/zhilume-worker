@@ -19,6 +19,10 @@ def defaults():
 def validate_structure(kind, config):
     if kind not in ('image', 'speech', 'video') or not isinstance(config, dict):
         raise ValueError('执行器配置须为对象')
+    if config.get('runtimeId'):
+        from .runtimes import RuntimeManager
+        RuntimeManager.validate_id(config['runtimeId'])
+        if kind == 'speech': raise ValueError('IndexTTS 使用自己的独立 Python 进程，不关联 ComfyUI 服务')
     strings = ('python', 'repository', 'modelDirectory', 'workingDirectory', 'device', 'url', 'ffmpeg', 'ffprobe')
     for key in strings:
         if key in config and not isinstance(config[key], str): raise ValueError(f'{key} 须为文本')

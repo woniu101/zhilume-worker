@@ -1,0 +1,16 @@
+services:
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 90s
+    ports:
+      - "127.0.0.1:4320:4320"
+    volumes:
+      - worker-state:/var/lib/zhilume-worker
+      # All Worker containers on this host must use this same host directory.
+      - ${ZHILUME_GPU_LOCKS:?Set the host GPU lock directory}:/var/lib/zhilume-gpu-locks
+volumes:
+  worker-state:

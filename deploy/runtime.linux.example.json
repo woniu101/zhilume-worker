@@ -1,0 +1,8 @@
+{
+  "type": "comfyui",
+  "python": "/srv/zhilume/runtimes/comfy/venv/bin/python",
+  "directory": "/srv/zhilume/runtimes/comfy/source",
+  "modelPathsFile": "/srv/zhilume/config/model-paths.yaml",
+  "device": "0",
+  "port": 8188
+}

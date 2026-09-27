@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { api } from "./api";
 import { executorNames, Status, statusNames } from "./ui";
+import { RuntimePanel } from "./runtimes";
 
 type Config = Record<string, any>;
 function parseConfig(raw: string): Config {
@@ -360,6 +361,8 @@ const actionNames: Record<string, string> = {
   enable: "检查并启用",
   disable: "停用并释放资源",
   install: "安装依赖",
+  start: "启动推理服务",
+  stop: "停止推理服务",
 };
 export function OperationList({ operations }: { operations: any[] }) {
   if (!operations.length) return null;
@@ -375,7 +378,7 @@ export function OperationList({ operations }: { operations: any[] }) {
             <div className="operation-row" key={o.id}>
               <div>
                 <strong>
-                  {executorNames[kind] || kind} ·{" "}
+                  {kind === "runtime" ? "运行服务" : executorNames[kind] || kind} ·{" "}
                   {actionNames[action] || action}
                 </strong>
                 <small>
@@ -595,6 +598,12 @@ export function EnvironmentPanel({
   const modelChoice = selectedModel || choices[0]?.modelId || "";
   return (
     <>
+      <RuntimePanel
+        data={data}
+        refresh={refresh}
+        reportError={reportError}
+        busy={working}
+      />
       <section className="panel">
         <div className="section-heading">
           <h2>
@@ -612,7 +621,11 @@ export function EnvironmentPanel({
         <div className="form-toolbar">
           <label>
             生成引擎
-            <select aria-label="生成引擎" value={kind} onChange={(e) => switchKind(e.target.value)}>
+            <select
+              aria-label="生成引擎"
+              value={kind}
+              onChange={(e) => switchKind(e.target.value)}
+            >
               {Object.entries(executorNames).map(([k, v]) => (
                 <option value={k} key={k}>
                   {v}
@@ -627,7 +640,7 @@ export function EnvironmentPanel({
         <p className="description">
           {kind === "speech"
             ? "复用已有 IndexTTS 环境。填写的是 Worker 部署机器上的路径，不是浏览器所在电脑的路径。"
-            : "Qwen 图片和 H3 视频均通过 ComfyUI 执行，可指向同一个专用服务。Python、程序目录、模型搜索目录与 GPU 设备由 ComfyUI 的启动配置管理；这里不会启动或安装 ComfyUI。"}
+            : "Qwen 图片和 H3 视频可复用已有专用服务，或选择上方配置的托管服务。服务运行和执行器接单分别管理；不会因保存配置而启动或安装推理环境。"}
         </p>
         <div className="actions">
           <button disabled={!templates || working} onClick={prepare}>
@@ -717,12 +730,29 @@ export function EnvironmentPanel({
               </>
             ) : (
               <>
-                <Field
-                  label="ComfyUI 服务地址"
-                  value={config.url}
-                  change={(v) => set("url", v)}
-                  hint="例如 http://127.0.0.1:8188，地址相对于 Worker 所在机器"
-                />
+                <label>
+                  服务部署方式
+                  <select
+                    aria-label="服务部署方式"
+                    value={config.runtimeId || ""}
+                    onChange={(e) => set("runtimeId", e.target.value)}
+                  >
+                    <option value="">复用已有服务（自行管理启停）</option>
+                    {(data.runtimes || []).map((r: any) => (
+                      <option key={r.id} value={r.id}>
+                        Worker 托管 · {r.id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!config.runtimeId && (
+                  <Field
+                    label="ComfyUI 服务地址"
+                    value={config.url}
+                    change={(v) => set("url", v)}
+                    hint="例如 http://127.0.0.1:8188，地址相对于 Worker 所在机器"
+                  />
+                )}
                 <label className="checkbox-field">
                   <input
                     type="checkbox"

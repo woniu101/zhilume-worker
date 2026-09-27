@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.9.0，配套 Studio 0.13.0 / Server 0.10.0，协议 3.0。新增独立鉴权的 React 管理页、可移植模型规格及共享 GPU 资源锁。部署以 [管理部署说明](deploy/management.md) 为准。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.10.0，配套 Studio 0.13.0 / Server 0.10.0，协议 3.0。核心不默认安装推理环境。部署以 [通用 Linux / WSL2 部署](deploy/portable.md) 为准：程序安装/升级/回退、复用外部服务、托管 ComfyUI 进程及共享 GPU 资源隔离。管理页面内置于 wheel，不需要 Node.js。此前上海二 A 模型验收见 [云端记录](deploy/README.md)，不替代本次托管模式的真实 GPU 验收。
 
 ## 启动与接入
 

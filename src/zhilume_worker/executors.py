@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol
 from .resources import hardware, ResourceLease
 from .environment import inspect_environment, validate_structure
+from .runtimes import RuntimeManager
 
 
 class Executor(Protocol):
@@ -22,6 +23,7 @@ class ExecutorManager:
     def __init__(self, worker):
         self.worker = worker
         self.root = worker.root
+        self.runtimes = RuntimeManager(self.root)
         self.config_path = self.root / 'config' / 'executors.json'
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_error = ''
@@ -53,8 +55,70 @@ class ExecutorManager:
         tmp.write_text(json.dumps(self.entries, ensure_ascii=False, indent=2), 'utf-8'); tmp.chmod(0o600); tmp.replace(self.config_path)
 
     def snapshot(self):
+        for kind, entry in self.entries.items():
+            runtime_id = entry.get('config', {}).get('runtimeId')
+            if runtime_id and self.states[kind]['state'] == 'ready' and not self.ready(kind):
+                self.states[kind].update(state='error', reason='托管推理服务未运行；请先启动服务，再检查并启用执行器', inferenceVerified=False)
         return [{'id': k, **self.states[k], 'enabled': self.entries.get(k, {}).get('enabled', False), 'config': self.entries.get(k, {}).get('config', {}),
                  'profiles': self.instances[k].public_profiles if k in self.instances and self.states[k]['state'] == 'ready' else []} for k in ADAPTERS]
+
+    def runtime_consumers(self, runtime_id):
+        return [k for k, v in self.entries.items() if v.get('config', {}).get('runtimeId') == runtime_id]
+
+    async def configure_runtime(self, runtime_id, config):
+        async with self.actions:
+            if self.worker.active or any(k in self.instances for k in self.runtime_consumers(runtime_id)):
+                raise ValueError('请先停用使用此服务的执行器并等待任务结束')
+            self.runtimes.configure(runtime_id, config)
+
+    async def runtime_action(self, runtime_id, action, policy='wait'):
+        if action == 'check': return await self.runtimes.check(runtime_id)
+        if action == 'stop':
+            if policy not in ('wait', 'cancel'): raise ValueError('请选择等待或取消任务')
+            # Drain every consumer before awaiting one task, so another adapter
+            # cannot submit a new GPU task to the shared service during shutdown.
+            consumers = self.runtime_consumers(runtime_id)
+            for kind in consumers:
+                self.entries[kind]['enabled'] = False
+                self.draining.add(kind)
+                self.states[kind]['state'] = 'draining'
+            self.persist()
+            await self.worker.hello()
+            if policy == 'cancel':
+                prefixes = tuple({'image': 'image.', 'video': 'video.', 'speech': 'audio.'}[k] for k in consumers)
+                # Cancel every shared consumer before disable() waits for its GPU
+                # lease; otherwise the first idle adapter could wait on a video
+                # task which has not received its cancellation yet.
+                for task in list(self.worker.active.values()):
+                    if task['job']['payload']['operation'].startswith(prefixes): self.worker.cancel(task)
+            failures = []
+            for kind in consumers:
+                try: await self.disable(kind, policy)
+                except ValueError as error: failures.append(str(error))
+            async with self.actions:
+                result = await self.runtimes.stop(runtime_id)
+            if failures:
+                raise ValueError('服务已停止，但 GPU 释放仍未确认；请恢复原执行器解除隔离')
+            return result
+        if action != 'start': raise ValueError('未知运行服务操作')
+        async with self.actions:
+            if self.worker.active: raise ValueError('请先等待当前任务结束')
+            gpus = await hardware()
+            if not gpus: raise ValueError('未发现 NVIDIA GPU；仍可保存配置和检查程序路径')
+            ids = [g['uuid'] for g in gpus]
+            owners = ResourceLease.quarantine_owners(ids)
+            allowed = {self.worker.worker_id + ':' + kind for kind in self.runtime_consumers(runtime_id)}
+            if owners and (len(owners) != 1 or not owners.issubset(allowed)):
+                raise ValueError('GPU 属于其他未释放执行器，不能启动此服务')
+            # Restarting the same quarantined backend is necessary to recover it;
+            # startup never clears the marker or advertises model readiness.
+            held = self.worker.quarantined_lease
+            lease = held or ResourceLease(ids, next(iter(owners), None), recovery=bool(owners))
+            try:
+                if not held: await lease.acquire()
+                return await self.runtimes.start(runtime_id)
+            finally:
+                if not held: lease.release()
 
     async def check(self, kind, enable=False):
         async with self.actions:
@@ -72,6 +136,8 @@ class ExecutorManager:
             try:
                 config = self.entries.get(kind, {}).get('config', {})
                 validate_structure(kind, config)
+                if config.get('runtimeId'):
+                    config = {**config, 'url': self.runtimes.url(config['runtimeId'])}
                 checks = self.states[kind]['checks']
                 await inspect_environment(kind, config, checks)
                 spec = dict(id='specification', title='模型执行规格', state='checking', detail='', remedy='在模型配置中填写实际权重版本、量化和每个组件的固定标识；不要填写本机路径或示例占位符。')
@@ -166,6 +232,10 @@ class ExecutorManager:
         self.states[kind]['state'] = 'disabled'
 
     def ready(self, kind):
+        runtime_id = self.entries.get(kind, {}).get('config', {}).get('runtimeId')
+        if runtime_id:
+            process = self.runtimes.processes.get(runtime_id)
+            if process is None or process.returncode is not None: return None
         return self.instances.get(kind) if self.states[kind]['state'] == 'ready' and kind not in self.draining else None
 
     async def start(self):
@@ -176,3 +246,4 @@ class ExecutorManager:
         for kind in list(self.instances):
             try: await self._stop(kind)
             except ValueError: pass
+        await self.runtimes.close()
