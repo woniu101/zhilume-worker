@@ -17,6 +17,15 @@ from .specification import sign
 from .resources import hardware
 
 
+def check_port_available(port):
+    with socket.socket() as probe:
+        # Match the Linux server's bind semantics: a previous owned connection
+        # in TIME_WAIT is reusable; an active listener must still be rejected.
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try: probe.bind(('127.0.0.1', port))
+        except OSError: raise ValueError('语言服务端口已占用；不接管未知进程') from None
+
+
 def public_profile(c):
     if not isinstance(c.get('modelId'), str) or not 1 <= len(c['modelId']) <= 160:
         raise ValueError('请填写语言模型标识')
@@ -105,9 +114,7 @@ class LanguageExecutor:
             st = Path(path).stat()
             if self.stamps.get(key) != (st.st_size, st.st_mtime_ns): raise ValueError('程序或模型已变更，请重新检查执行规格')
         port = self.config.get('port', 8190)
-        with socket.socket() as probe:
-            try: probe.bind(('127.0.0.1', port))
-            except OSError: raise ValueError('语言服务端口已占用；不接管未知进程')
+        check_port_available(port)
         command = [self.config['binary'], '-m', self.config['modelFile'], '--host', '127.0.0.1', '--port', str(port),
             '--alias', 'zhilume-language', '-c', str(self.profile['contextSize']), '-ngl', '999', '--split-mode', 'none',
             '--device', 'CUDA0', '--parallel', '1', '--no-context-shift', '--jinja']

@@ -7,12 +7,32 @@ from unittest.mock import AsyncMock, patch
 from types import SimpleNamespace
 import httpx
 import sys
-from zhilume_worker.language import LanguageExecutor, public_profile
+import socket
+from zhilume_worker.language import LanguageExecutor, public_profile, check_port_available
 
 def config():
     return dict(modelId='test-model', identity=dict(revision='test-v1', quantization='Q4_K_M', artifacts={'model':'sha256:'+'a'*64,'binary':'sha256:'+'b'*64}))
 
 class LanguageTests(unittest.IsolatedAsyncioTestCase):
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux inference socket semantics')
+    def test_port_probe_rejects_listener_but_accepts_previous_time_wait(self):
+        with socket.socket() as listener, socket.socket() as client:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(('127.0.0.1', 0)); listener.listen(1)
+            port = listener.getsockname()[1]
+            with self.assertRaisesRegex(ValueError, '端口已占用'): check_port_available(port)
+            client.settimeout(2); client.connect(('127.0.0.1', port))
+            accepted, _ = listener.accept()
+            with accepted:
+                accepted.settimeout(2); accepted.shutdown(socket.SHUT_WR)
+                self.assertEqual(client.recv(1), b'')
+                client.shutdown(socket.SHUT_WR)
+                self.assertEqual(accepted.recv(1), b'')
+        # Establish the exact failure mode, rather than merely testing a free port.
+        with socket.socket() as old_probe:
+            with self.assertRaises(OSError): old_probe.bind(('127.0.0.1', port))
+        check_port_available(port)
+
     def test_identity_is_path_independent_but_limits_and_weights_are_not(self):
         c = config(); p = public_profile(c)
         self.assertEqual(p, public_profile({**c,'binary':'/elsewhere/bin','modelFile':'/elsewhere/model','device':'1'}))

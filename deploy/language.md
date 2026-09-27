@@ -40,3 +40,5 @@ llama.cpp 共享库发布包的 `llama-server` 可能仅是启动器。此类部
 复测固定程序来源：[llama.cpp b11218](https://github.com/ggml-org/llama.cpp/releases/tag/b11218)。模型来源：[Qwen3.5-9B](https://huggingface.co/Qwen/Qwen3.5-9B)。转换命令为 `python convert_hf_to_gguf.py /path/to/Qwen3.5-9B --outfile /path/to/Qwen3.5-9B-BF16.gguf --outtype bf16`；具体依赖须在独立转换环境检查。本次未实现语言执行器的一键安装或发布云镜像。
 
 接口依据：[llama.cpp 官方 Server 文档](https://github.com/ggml-org/llama.cpp/tree/master/tools/server)。
+
+2026-09-28 已直接读取上海二 A 公共 Qwen3.8-27B Q5_K_M GGUF 完成单卡模型调用及执行器测试，无需转换。加载后短文本约 60 Token/s；当前每任务加载/卸载路径约 8.2–8.7 秒。范围、参数、输出约束问题及 TIME_WAIT 启动检查修正见 [测试报告](qwen38-benchmark-2026-09-28.md)。这不是该模型的 Server/Studio 全链路验收，也不自动替换已有部署配置。

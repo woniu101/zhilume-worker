@@ -1,0 +1,341 @@
+{
+  "startedAt": "2026-09-27T16:32:20Z",
+  "finishedAt": "2026-09-27T16:37:44Z",
+  "scope": "Cloud loopback inference and actual Worker executor; excludes Studio, Server queue and WAN",
+  "metadata": {
+    "version": 3,
+    "tensors": 866,
+    "fields": {
+      "general.architecture": "qwen35",
+      "general.type": "model",
+      "general.sampling.top_k": 20,
+      "general.sampling.top_p": 0.949999988079071,
+      "general.sampling.temp": 1.0,
+      "general.name": "Qwen3.8-27B",
+      "general.basename": "Qwen3.8-27B",
+      "general.description": "Renewal of the beloved Qwen model, delivering unmatched intelligence density.",
+      "general.quantized_by": "Unsloth",
+      "general.size_label": "27B",
+      "general.license": "apache-2.0",
+      "general.repo_url": "https://huggingface.co/unsloth",
+      "general.base_model.count": 1,
+      "general.base_model.0.name": "Qwen3.8 27B",
+      "general.base_model.0.organization": "Qwen",
+      "general.base_model.0.repo_url": "https://huggingface.co/Qwen/Qwen3.8-27B",
+      "general.tags": {
+        "arrayCount": 1
+      },
+      "qwen35.block_count": 65,
+      "qwen35.context_length": 262144,
+      "general.quantization_version": 2,
+      "general.file_type": 17
+    }
+  },
+  "fileBytes": 19834055648,
+  "modelSha256": "07deb7fa91bf751d3000774fe5bb8afae5ffb41255fd19980147468052e07177",
+  "runtimeVersion": "0.00.000.548 I srv  llama_server: initializing ...\nversion: 0.5.0-dev (build 11218, commit 33c923db1)\nbuilt with GNU 13.3.0 for Linux x86_64\n",
+  "startupSeconds": 5.369394154986367,
+  "hashSeconds": 32.536237261025235,
+  "workerCheckSeconds": 18.281306819990277,
+  "warm": [
+    {
+      "case": "text",
+      "repeat": 1,
+      "ttftSeconds": 0.4575506339315325,
+      "totalSeconds": 2.4031510920030996,
+      "usage": {
+        "completion_tokens": 119,
+        "prompt_tokens": 59,
+        "total_tokens": 178,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 59,
+        "prompt_ms": 450.266,
+        "prompt_per_token_ms": 7.631627118644068,
+        "prompt_per_second": 131.03365566132018,
+        "predicted_n": 119,
+        "predicted_ms": 1945.85,
+        "predicted_per_token_ms": 16.490254237288134,
+        "predicted_per_second": 60.64187887041653
+      },
+      "finish": "stop",
+      "output": "天刚蒙蒙亮，林间还笼罩着一层轻纱般的薄雾，柔柔地缠绕在树干与枝叶之间，让整个世界显得朦胧而静谧。脚下的小溪潺潺流淌，清澈的溪水撞击着圆润的卵石，发出清脆悦耳的声响，仿佛在低语着森林的秘密。忽然，一声婉转的鸟鸣划破宁静，紧接着是此起彼伏的啁啾，像是回应着晨光。雾气在微凉的空气中缓缓升腾、消散，阳光透过叶隙洒下斑驳光影，新的一天就在这清新与生机中悄然苏醒。"
+    },
+    {
+      "case": "qwen_prompt",
+      "repeat": 1,
+      "ttftSeconds": 0.5246725319884717,
+      "totalSeconds": 2.6788821739610285,
+      "usage": {
+        "completion_tokens": 132,
+        "prompt_tokens": 76,
+        "total_tokens": 208,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 76,
+        "prompt_ms": 248.532,
+        "prompt_per_token_ms": 3.270157894736842,
+        "prompt_per_second": 305.79563195081516,
+        "predicted_n": 132,
+        "predicted_ms": 2154.033,
+        "predicted_per_token_ms": 16.442999999999998,
+        "predicted_per_second": 60.81615277017576
+      },
+      "finish": "stop",
+      "output": "清晨柔和的自然光透过窗纱，斜射在纹理清晰的暖色实木桌面上。画面中心静置一只通透的蓝色玻璃杯，杯壁折射出细腻的光影层次，内部空无一物，边缘因光线穿透而泛起晶莹的高光。背景虚化，隐约可见窗外朦胧的天色与植物轮廓，营造静谧氛围。采用特写构图，焦点锐利地落在杯身中上部，突出玻璃的冷冽质感与木材温润触感的对比。整体色调清新明亮，蓝色纯净饱和，无多余装饰或文字元素，强调极简美学与光影的微妙互动，呈现宁静致远的视觉体验。"
+    },
+    {
+      "case": "h3_prompt",
+      "repeat": 1,
+      "ttftSeconds": 0.5772675069747493,
+      "totalSeconds": 2.3840035459725186,
+      "usage": {
+        "completion_tokens": 111,
+        "prompt_tokens": 82,
+        "total_tokens": 193,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 82,
+        "prompt_ms": 250.835,
+        "prompt_per_token_ms": 3.0589634146341464,
+        "prompt_per_second": 326.90812685629993,
+        "predicted_n": 111,
+        "predicted_ms": 1806.627,
+        "predicted_per_token_ms": 16.42388181818182,
+        "predicted_per_second": 60.88694567279244
+      },
+      "finish": "stop",
+      "output": "A single blue ceramic cup rests centrally on a textured, warm-toned wooden table surface. The object executes a slow, continuous clockwise rotation around its vertical axis. The camera remains completely static in a fixed medium shot, maintaining a consistent angle and focus throughout the sequence. Soft, diffused natural light illuminates the scene from the left, casting subtle, shifting shadows that emphasize the cup’s glossy curvature and the wood grain details. The motion is smooth and steady, ensuring seamless continuity across the entire five-second duration without any abrupt changes or interruptions in movement."
+    },
+    {
+      "case": "text",
+      "repeat": 2,
+      "ttftSeconds": 0.6318987369304523,
+      "totalSeconds": 2.6690839359071106,
+      "usage": {
+        "completion_tokens": 125,
+        "prompt_tokens": 59,
+        "total_tokens": 184,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 59,
+        "prompt_ms": 245.646,
+        "prompt_per_token_ms": 4.163491525423729,
+        "prompt_per_second": 240.1830276088355,
+        "predicted_n": 125,
+        "predicted_ms": 2037.163,
+        "predicted_per_token_ms": 16.428733870967744,
+        "predicted_per_second": 60.86896335737494
+      },
+      "finish": "stop",
+      "output": "天刚蒙蒙亮，林间还笼着一层轻纱般的薄雾，将远处的树影晕染得朦胧而温柔。脚下的小径湿漉漉的，踩上去发出轻微的声响，惊起几只栖息的飞鸟。不远处，一条清澈的溪流潺潺流过，水声细碎，像是大自然最轻柔的低语。阳光透过枝叶的缝隙洒落，在雾气中形成一道道金色的光柱，尘埃在其中缓缓浮动。鸟儿们开始活跃起来，清脆的鸣叫声此起彼伏，穿透了静谧的空气，唤醒了沉睡的森林，带来一整天的生机与希望。"
+    },
+    {
+      "case": "qwen_prompt",
+      "repeat": 2,
+      "ttftSeconds": 0.564945433055982,
+      "totalSeconds": 2.5369804369984195,
+      "usage": {
+        "completion_tokens": 121,
+        "prompt_tokens": 76,
+        "total_tokens": 197,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 76,
+        "prompt_ms": 248.136,
+        "prompt_per_token_ms": 3.2649473684210526,
+        "prompt_per_second": 306.28365090111873,
+        "predicted_n": 121,
+        "predicted_ms": 1971.915,
+        "predicted_per_token_ms": 16.432624999999998,
+        "predicted_per_second": 60.8545500186367
+      },
+      "finish": "stop",
+      "output": "特写镜头，一只通透的蓝色玻璃杯静置于质朴的原木桌面上。清晨柔和的自然侧逆光透过窗户洒入，光线穿透杯身，在粗糙的木质纹理上投射出斑驳且清澈的蓝色光影。玻璃表面光滑细腻，边缘折射出微弱的光晕，凸显材质的纯净与冷冽感。背景为虚化的窗框轮廓，营造静谧、清新的晨间氛围。画面色调以温暖的木色与清冷的蓝色形成对比，光影层次丰富，质感真实，无文字，无多余物体，极简构图，高分辨率摄影风格。"
+    },
+    {
+      "case": "h3_prompt",
+      "repeat": 2,
+      "ttftSeconds": 0.6091810310026631,
+      "totalSeconds": 2.684423950035125,
+      "usage": {
+        "completion_tokens": 128,
+        "prompt_tokens": 82,
+        "total_tokens": 210,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 82,
+        "prompt_ms": 248.364,
+        "prompt_per_token_ms": 3.028829268292683,
+        "prompt_per_second": 330.1605707751526,
+        "predicted_n": 128,
+        "predicted_ms": 2075.097,
+        "predicted_per_token_ms": 16.339346456692915,
+        "predicted_per_second": 61.201958269902555
+      },
+      "finish": "stop",
+      "output": "The video opens with a static, fixed camera shot focused tightly on a vibrant blue ceramic cup resting on a rustic wooden table. Over the precise duration of five seconds, the cup executes a slow, smooth, and continuous rotation around its vertical axis. The lighting is soft and natural, casting subtle shadows that shift gently as the cup turns, highlighting the glossy texture of the glaze against the grain of the wood. The motion is steady and uninterrupted, maintaining perfect continuity from start to finish. No other objects move, and the background remains consistent, ensuring the viewer’s attention stays solely on the elegant, deliberate spinning movement of the blue cup."
+    },
+    {
+      "case": "text",
+      "repeat": 3,
+      "ttftSeconds": 0.5999699700623751,
+      "totalSeconds": 2.614469790016301,
+      "usage": {
+        "completion_tokens": 120,
+        "prompt_tokens": 59,
+        "total_tokens": 179,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 59,
+        "prompt_ms": 243.427,
+        "prompt_per_token_ms": 4.125881355932203,
+        "prompt_per_second": 242.37245662970827,
+        "predicted_n": 120,
+        "predicted_ms": 2014.596,
+        "predicted_per_token_ms": 16.929378151260504,
+        "predicted_per_second": 59.0689150579074
+      },
+      "finish": "stop",
+      "output": "晨光初透，林间弥漫着一层乳白色的薄雾，如轻纱般缠绕在苍翠的枝叶间，让整个世界显得朦胧而静谧。脚下的泥土松软湿润，散发着草木特有的清香。不远处，一条清澈的小溪蜿蜒穿过石滩，水流撞击岩石发出清脆悦耳的声响，仿佛在低声诉说着夜的秘密。忽然，几声婉转的鸟鸣划破寂静，从树梢深处传来，紧接着是此起彼伏的合唱。雾气在微风中缓缓流动，光影斑驳地洒在地面，新的一天在这生机盎然的宁静中悄然苏醒。"
+    },
+    {
+      "case": "qwen_prompt",
+      "repeat": 3,
+      "ttftSeconds": 0.6600196249783039,
+      "totalSeconds": 2.6270898189395666,
+      "usage": {
+        "completion_tokens": 116,
+        "prompt_tokens": 76,
+        "total_tokens": 192,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 76,
+        "prompt_ms": 290.104,
+        "prompt_per_token_ms": 3.817157894736842,
+        "prompt_per_second": 261.9750158563826,
+        "predicted_n": 116,
+        "predicted_ms": 1967.038,
+        "predicted_per_token_ms": 17.104678260869566,
+        "predicted_per_second": 58.4635375625687
+      },
+      "finish": "stop",
+      "output": "一只通透的深蓝色玻璃杯静置于纹理清晰的质朴原木桌面上。采用低角度特写构图，焦点集中在杯身，背景略微虚化以突出主体。清晨柔和的自然光从左侧窗户斜射入内，穿过清澈的玻璃杯壁，在木质表面投射出明亮且带有蓝色调的光斑与折射阴影。光线勾勒出玻璃光滑细腻的质感以及杯口边缘的高光反射。整体氛围宁静、清新，色调保持纯净的蓝色与暖木色对比，无多余装饰或文字元素，强调光影在材质上的微妙互动。"
+    },
+    {
+      "case": "h3_prompt",
+      "repeat": 3,
+      "ttftSeconds": 0.6945614069700241,
+      "totalSeconds": 2.7670985440490767,
+      "usage": {
+        "completion_tokens": 125,
+        "prompt_tokens": 82,
+        "total_tokens": 207,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 82,
+        "prompt_ms": 285.776,
+        "prompt_per_token_ms": 3.4850731707317073,
+        "prompt_per_second": 286.93802138738033,
+        "predicted_n": 125,
+        "predicted_ms": 2072.349,
+        "predicted_per_token_ms": 16.71249193548387,
+        "predicted_per_second": 59.83548137886041
+      },
+      "finish": "stop",
+      "output": "A single blue ceramic cup rests on a textured, rustic wooden table surface. The camera remains completely static, locked in a tight close-up shot with shallow depth of field, keeping the background softly blurred. The cup rotates slowly and smoothly clockwise at a constant, gentle pace, revealing its smooth glaze and subtle reflections. Soft, diffused natural light streams from the left, casting long, soft shadows that shift subtly as the object turns. The motion is continuous and seamless over the five-second duration, emphasizing the tactile quality of the wood grain and the serene, meditative atmosphere of the scene without any abrupt movements or interruptions."
+    }
+  ],
+  "worker": [
+    {
+      "case": "text",
+      "totalSeconds": 8.675415822071955,
+      "stages": [
+        {
+          "message": "加载独立语言模型",
+          "seconds": 0.0019761930452659726
+        },
+        {
+          "message": "生成文本",
+          "seconds": 5.793297694995999
+        }
+      ],
+      "output": "天光微熹，山林间浮起一层淡淡的薄雾，如轻纱般缠绕在苍翠的枝叶间。脚下的落叶松软湿润，空气中弥漫着泥土与青草混合的清新气息。不远处，一条细窄的溪流正潺潺流淌，清澈见底的水声清脆悦耳，像是大自然最温柔的耳语。忽而，几声清脆的鸟鸣划破静谧，惊起林间的一抹绿意，也唤醒了沉睡的森林。阳光透过雾霂洒下斑驳光影，整个世界仿佛在这一刻苏醒，宁静而充满生机。",
+      "gpuAfter": "NVIDIA GeForce RTX 5090, 32607, 2"
+    },
+    {
+      "case": "qwen_prompt",
+      "totalSeconds": 8.214264404959977,
+      "stages": [
+        {
+          "message": "加载独立语言模型",
+          "seconds": 0.003559923032298684
+        },
+        {
+          "message": "生成文本",
+          "seconds": 5.423955988953821
+        }
+      ],
+      "output": "清晨柔和的自然光透过窗棂，温柔地洒在质朴的实木桌面上。一只晶莹剔透的蓝色玻璃杯静置于木纹清晰的中心，杯身保留着深邃而纯净的湛蓝色调，无多余文字或图案干扰。光线穿过杯壁，在桌面投射出细腻的光斑与折射阴影，凸显玻璃的通透质感与木质的温润纹理。构图简洁聚焦，背景虚化处理以突出主体，营造出静谧、清新且充满生活气息的清晨氛围，整体色调和谐统一，强调光影互动与材质对比。",
+      "gpuAfter": "NVIDIA GeForce RTX 5090, 32607, 2"
+    },
+    {
+      "case": "h3_prompt",
+      "totalSeconds": 8.669972064089961,
+      "stages": [
+        {
+          "message": "加载独立语言模型",
+          "seconds": 0.0029390749987214804
+        },
+        {
+          "message": "生成文本",
+          "seconds": 5.748458817019127
+        }
+      ],
+      "output": "A single blue ceramic cup rests centrally on a rustic wooden table with visible grain. The scene is illuminated by soft, diffused natural light coming from the left, creating gentle highlights on the cup’s rim and subtle shadows on the table surface. The camera remains completely fixed in a medium close-up shot, ensuring zero movement throughout the sequence. Over the course of five seconds, the cup rotates slowly and smoothly in a clockwise direction. The motion is consistent and steady, emphasizing the texture of the wood and the matte finish of the blue glaze. The background remains static and softly out of focus, keeping the viewer’s attention solely on the gentle, continuous rotation of the object.",
+      "gpuAfter": "NVIDIA GeForce RTX 5090, 32607, 2"
+    }
+  ],
+  "gpuBefore": "NVIDIA GeForce RTX 5090, 32607, 2",
+  "gpuAfter": "NVIDIA GeForce RTX 5090, 32607, 2",
+  "initialIssue": "语言服务端口已占用；不接管未知进程",
+  "testedFix": "Linux SO_REUSEADDR bind probe; active listeners still rejected",
+  "passed": true,
+  "peakSampledMiB": 19192
+}
