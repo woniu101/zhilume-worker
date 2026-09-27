@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.10.0，配套 Studio 0.13.0 / Server 0.10.0，协议 3.0。核心不默认安装推理环境。部署以 [通用 Linux / WSL2 部署](deploy/portable.md) 为准：程序安装/升级/回退、复用外部服务、托管 ComfyUI 进程及共享 GPU 资源隔离。管理页面内置于 wheel，不需要 Node.js。上海二 A 已通过复用现有环境的托管 Qwen/H3/IndexTTS 切换、取消停服、恢复及重启验收；全新 GPU 环境安装、其他平台和容器 GPU 仍待实测。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.11.0，配套 Studio 0.13.0 / Server 0.10.0，协议 3.0。核心不默认安装推理环境。部署以 [通用 Linux / WSL2 部署](deploy/portable.md) 为准：程序安装/升级/回退、复用外部服务、托管 ComfyUI 进程及共享 GPU 资源隔离。管理页面内置于 wheel，不需要 Node.js。上海二 A 已通过复用现有环境的托管 Qwen/H3/IndexTTS 切换、取消停服、恢复及重启验收；全新 GPU 环境安装、其他平台和容器 GPU 仍待实测。
 
 ## 启动与接入
 
@@ -108,3 +108,5 @@ uv run zhilume-worker --speech-config config/indextts.local.json --enable-speech
 ## H3 视频
 
 通过 `--enable-video-execution --video-config config/video.local.json` 显式启用，详见 [视频部署](deploy/video.md)。FL2VA 文本/首尾帧，Ref2VA 图片/视频/音频参考；与图片共用受管 ComfyUI 生命周期，与语音共用子进程取消。上海二 A 512×288、124 帧样本已完成真实推理与取消后恢复；不是全配置性能或质量认证。
+
+标准推理环境安装见 [安装说明](deploy/standard-install.md)。0.11 增加候选依赖锁、安装前检查、阶段状态及取消；干净环境 GPU 验收仍待完成。

@@ -41,14 +41,14 @@ def attach_management(app, worker, credentials, get_owner, unbind):
         if not secrets.compare_digest(request.headers.get('authorization', ''), 'Bearer ' + token): raise HTTPException(401, '需要部署管理凭证；任务接入凭证无此权限')
 
     def public_operation(operation):
-        return {k: v for k, v in operation.items() if k != 'task'}
+        return {k: v for k, v in operation.items() if k != 'task' and not k.startswith('_')}
 
     def record(operation):
         folder = worker.root / 'logs'; folder.mkdir(exist_ok=True)
         with (folder / (operation['name'].split(':')[0] + '.jsonl')).open('a', encoding='utf-8') as f:
             f.write(json.dumps(redact(public_operation(operation)), ensure_ascii=False) + '\n')
 
-    def launch(name, operation):
+    def launch(name, operation, with_progress=False):
         if any(v['state'] == 'running' for v in operations.values()): raise HTTPException(409, '已有部署操作进行中')
         for old in list(operations)[:-49]:
             if operations[old]['state'] != 'running': operations.pop(old)
@@ -56,11 +56,14 @@ def attach_management(app, worker, credentials, get_owner, unbind):
         record(operations[oid])
         async def run():
             try:
-                result = await operation()
+                operations[oid]['_started'] = True
+                if operations[oid].get('cancelRequested'): raise asyncio.CancelledError()
+                result = await operation(lambda stage: operations[oid].update(stage=stage)) if with_progress else await operation()
                 operations[oid].update(state='failed' if isinstance(result, dict) and result.get('state') == 'error' else 'succeeded', result=result)
             except Exception as e: operations[oid].update(state='failed', error=str(e) if isinstance(e, ValueError) else type(e).__name__)
             except asyncio.CancelledError:
-                operations[oid].update(state='failed', error='服务关闭，部署操作已中断')
+                requested = operations[oid].get('cancelRequested', False)
+                operations[oid].update(state='cancelled' if requested else 'failed', error='安装已取消，未覆盖已有环境；重试请使用新目录' if requested else '服务关闭，部署操作已中断')
                 raise
             finally:
                 operations[oid]['finishedAt'] = datetime.now(timezone.utc).isoformat()
@@ -100,6 +103,17 @@ def attach_management(app, worker, credentials, get_owner, unbind):
     @app.get('/management/api/operations')
     async def operation_status(request: Request):
         auth(request); return [public_operation(o) for o in operations.values()]
+
+    @app.post('/management/api/operations/{operation_id}/cancel')
+    async def cancel_install(operation_id: str, request: Request):
+        auth(request)
+        operation = operations.get(operation_id)
+        if not operation or not operation['name'].endswith(':install'): raise HTTPException(404, '未知安装操作')
+        if operation['state'] == 'running' and not operation.get('cancelRequested'):
+            operation['cancelRequested'] = True
+            operation['stage'] = '正在取消安装并回收子进程'
+            if operation.get('_started'): operation['task'].cancel()
+        return public_operation(operation)
 
     @app.get('/management/api/environment-templates')
     async def environment_templates(request: Request):
@@ -143,13 +157,18 @@ def attach_management(app, worker, credentials, get_owner, unbind):
     @app.post('/management/api/install')
     async def install_runtime(request: Request):
         auth(request); body = await request.json()
+        if not isinstance(body, dict): raise HTTPException(400, '安装请求须为对象')
         if worker.active: raise HTTPException(409, '请先等待当前任务结束')
         from .installer import plan, install
         try: spec = plan(body.get('kind'), body.get('directory', ''), body.get('python', ''))
         except ValueError as e: raise HTTPException(400, str(e))
+        destination, state = Path(spec['directory']).resolve(), worker.root.resolve()
+        if destination == state or destination in state.parents or state in destination.parents:
+            raise HTTPException(400, '推理程序安装目录与 Worker 数据目录须分开')
         if body.get('execute') is not True: return spec
+        if body.get('planId') != spec['planId']: raise HTTPException(409, '安装计划已变化，请重新查看后执行')
         folder=worker.root/'logs';folder.mkdir(exist_ok=True)
-        return launch(body['kind']+':install', lambda: install(body['kind'],body['directory'],body['python'],folder/(body['kind']+'-install.log')))
+        return launch(body['kind']+':install', lambda progress: install(body['kind'],body['directory'],body['python'],folder/(body['kind']+'-install.log'), expected_plan=spec['planId'], progress=progress), with_progress=True)
 
     @app.get('/management/api/access')
     async def access(request: Request):

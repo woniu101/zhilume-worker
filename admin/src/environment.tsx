@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
   CircleAlert,
@@ -365,10 +365,12 @@ const actionNames: Record<string, string> = {
   stop: "停止推理服务",
 };
 export function OperationList({ operations }: { operations: any[] }) {
+  const [cancelError, setCancelError] = useState("");
   if (!operations.length) return null;
   return (
     <section className="panel">
       <h2>最近部署操作</h2>
+      {cancelError && <p className="inline-alert">{cancelError}</p>}
       {operations
         .slice(-8)
         .reverse()
@@ -396,9 +398,16 @@ export function OperationList({ operations }: { operations: any[] }) {
               </Status>
               {o.state === "running" && (
                 <p className="description">
-                  正在执行，管理接口保持可用。检查明细见对应引擎的逐项结果。
+                  {o.stage || "正在执行，管理接口保持可用。检查明细见对应引擎的逐项结果。"}
                 </p>
               )}
+              {action === "install" && o.state === "running" && (
+                <button disabled={o.cancelRequested} onClick={() => {
+                  setCancelError("");
+                  void api(`operations/${o.id}/cancel`, "POST", {}).catch(e => setCancelError(e.message));
+                }}>{o.cancelRequested ? "正在取消…" : "取消安装"}</button>
+              )}
+              {o.result?.next && <p className="description">{o.result.next}</p>}
               {(o.error || o.result?.reason) && (
                 <p
                   className={
@@ -498,6 +507,17 @@ export function EnvironmentPanel({
     [installDir, setInstallDir] = useState(""),
     [python, setPython] = useState(""),
     [plan, setPlan] = useState<any>(null);
+  const currentInstall = useRef("");
+  currentInstall.current = JSON.stringify({kind, directory: installDir, python});
+  async function previewInstall() {
+    const snapshot = currentInstall.current;
+    try {
+      const result = await api("install", "POST", JSON.parse(snapshot));
+      if (currentInstall.current === snapshot) setPlan(result);
+    } catch (e) {
+      if (currentInstall.current === snapshot) reportError((e as Error).message);
+    }
+  }
   const [pendingSave, setPendingSave] = useState<{
     id: string;
     kind: string;
@@ -911,7 +931,10 @@ export function EnvironmentPanel({
         <summary>安装独立标准环境（Linux / WSL2）</summary>
         <p className="description">
           已有环境无需重复安装。安装是独立操作，不下载模型、不启动 GPU。
+          Qwen/H3 共用一个 ComfyUI 环境，选择同一托管服务即可。
         </p>
+        <p className="description">{kind === "speech" ? "IndexTTS 标准方案使用 Python 3.11。" : "ComfyUI 标准方案使用 Python 3.12。"} 需要 Linux x86_64、Git、uv 及至少 24 GiB 空闲磁盘；不会自动安装系统工具或 Python。</p>
+        <p className="description">本版标准依赖方案尚待干净环境 GPU 验收；已有环境托管实测不代表此安装方案已验证。</p>
         <Field
           label="新安装目录"
           value={installDir}
@@ -930,26 +953,27 @@ export function EnvironmentPanel({
         />
         <button
           disabled={working}
-          onClick={() =>
-            void api("install", "POST", {
-              kind,
-              directory: installDir,
-              python,
-            }).then(setPlan, (e) => reportError(e.message))
-          }
+          onClick={() => void previewInstall()}
         >
           查看安装计划
         </button>
         {plan && (
           <>
-            <pre>{JSON.stringify(plan, null, 2)}</pre>
+            <div className="description">
+              <p>环境：{plan.profile} · Python {plan.pythonVersion} · CUDA 12.8</p>
+              <p>安装到：{plan.directory}</p>
+              <p>依次执行：{plan.steps?.join(" → ")}</p>
+              <p>完成后仍需配置模型、检查并显式启用。安装失败保留记录，使用新目录重试。</p>
+              <details><summary>版本与依赖锁详情</summary><pre>{JSON.stringify(plan, null, 2)}</pre></details>
+            </div>
             <button
               disabled={working}
               onClick={() =>
                 void api("install", "POST", {
                   kind: plan.kind,
                   directory: plan.directory,
-                  python,
+                  python: plan.python,
+                  planId: plan.planId,
                   execute: true,
                 }).then(refresh, (e) => reportError(e.message))
               }

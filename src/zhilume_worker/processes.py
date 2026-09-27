@@ -15,11 +15,12 @@ async def run_child(command, cwd, log, timeout=900, env=None):
             if code:
                 raise ValueError(f'子进程执行失败，请检查 Worker 本地 {log.name}；未生成可归档结果')
         except BaseException:
-            if process.returncode is None:
-                if os.name == 'nt':
-                    process.kill()
-                else:
-                    os.killpg(process.pid, signal.SIGKILL)
-                await process.wait()
+            if os.name == 'nt':
+                if process.returncode is None: process.kill()
+            else:
+                # A failing group leader may have exited before its descendants.
+                # Reap our whole owned group, not only a still-running leader.
+                try: os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError: pass
+            await process.wait()
             raise
-

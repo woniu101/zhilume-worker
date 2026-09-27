@@ -1,16 +1,16 @@
-# Worker 0.10：通用 Linux / WSL2 部署
+# Worker 0.11：通用 Linux / WSL2 部署
 
 核心与推理环境分开：只安装核心即可使用管理台；不需要 Node.js、Torch、ComfyUI、Server 或显卡。真实生成仍需准备对应 GPU 环境。上海二 A 已通过复用已有推理环境的托管模式真实 GPU 验收；Windows 原生推理、全新推理环境安装和其他云 GPU 仍未验收。
 
 ## 1. 安装核心和启动管理台
 
-准备 Python 3.11+（建议 3.12）、uv，解压 `zhilume-worker-0.10.0-linux-bundle.tar.gz` 即可获得发布 wheel、安装入口和配置模板，无需克隆开发仓库。也可使用源码树与单独 wheel。安装依赖是显式操作，安装器不会自动安装系统 Python、启服务或改 systemd。
+准备 Python 3.11+（建议 3.12）、uv，解压 `zhilume-worker-0.11.0-linux-bundle.tar.gz` 即可获得发布 wheel、安装入口和配置模板，无需克隆开发仓库。也可使用源码树与单独 wheel。安装依赖是显式操作，安装器不会自动安装系统 Python、启服务或改 systemd。
 
 ```bash
 # 第一次可用系统 python3 执行 bootstrap；--python 指向预先准备的 3.12。
 bash deploy/install.sh install --program /opt/zhilume-worker --state /var/lib/zhilume-worker \
-  --wheel /path/to/zhilume_worker-0.10.0-py3-none-any.whl --python /path/to/python3.12
-bash deploy/install.sh activate --program /opt/zhilume-worker --state /var/lib/zhilume-worker --version 0.10.0
+  --wheel /path/to/zhilume_worker-0.11.0-py3-none-any.whl --python /path/to/python3.12
+bash deploy/install.sh activate --program /opt/zhilume-worker --state /var/lib/zhilume-worker --version 0.11.0
 /opt/zhilume-worker/current/bin/zhilume-worker --state /var/lib/zhilume-worker --show-management-token
 export ZHILUME_RESOURCE_LOCK_DIR=/var/lib/zhilume-gpu-locks
 /opt/zhilume-worker/current/bin/zhilume-worker --state /var/lib/zhilume-worker
@@ -23,7 +23,7 @@ export ZHILUME_RESOURCE_LOCK_DIR=/var/lib/zhilume-gpu-locks
 图片/视频适配器需显式安装轻量 Pillow 校验依赖到当前核心环境，推理依赖仍保持独立：
 
 ```bash
-uv pip install --python /opt/zhilume-worker/current/bin/python '/path/to/zhilume_worker-0.10.0-py3-none-any.whl[image,video]'
+uv pip install --python /opt/zhilume-worker/current/bin/python '/path/to/zhilume_worker-0.11.0-py3-none-any.whl[image,video]'
 ```
 
 ## 2. 选择环境管理方式
@@ -72,3 +72,7 @@ zhilume-worker --state /var/lib/zhilume-worker --runtime comfy-main --runtime-ac
 - 其他云平台、自有 NVIDIA Linux 主机、容器 GPU、华北二 A 仍待实测。不得以本次复用环境样本替代全新安装或跨平台验收。完整记录见 Server 仓库 `docs/worker-managed-gpu-acceptance-2026-09-27.md`。
 
 语言模型执行器放在此部署基础之后，首验候选 Qwen3.5-9B；本版本尚未实现语言模型推理适配器。
+
+## 5. 独立标准环境安装
+
+0.11 的前置要求、候选依赖锁、计划确认、取消与失败处理见 [标准安装](standard-install.md)。完整推理环境和 GPU 验收尚未通过，不使用已有环境托管样本替代。

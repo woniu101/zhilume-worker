@@ -126,6 +126,7 @@ export const statusNames: Record<string, string> = {
   running: "执行中",
   succeeded: "完成",
   failed: "失败",
+  cancelled: "已取消",
 };
 export function Status({
   state,

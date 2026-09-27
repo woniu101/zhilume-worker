@@ -18,6 +18,35 @@ def args(root):
 
 
 class ManagementTest(unittest.TestCase):
+    def test_install_plan_authority_progress_cancel_and_state_boundary(self):
+        import sys,time
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)/'state'
+            with TestClient(create_app(args(root))) as client:
+                admin={'Authorization':'Bearer '+admin_identity(root)}
+                schedule={'Authorization':'Bearer '+identity(root)['credential']}
+                body={'kind':'image','directory':str(Path(tmp)/'new inference environment'),'python':sys.executable}
+                self.assertEqual(client.post('/management/api/install',headers=schedule,json=body).status_code,401)
+                self.assertEqual(client.post('/management/api/install',headers=admin,json={**body,'directory':str(root/'runtime')}).status_code,400)
+                spec=client.post('/management/api/install',headers=admin,json=body).json()
+                self.assertIn('planId',spec)
+                self.assertEqual(client.post('/management/api/install',headers=admin,json={**body,'execute':True}).status_code,409)
+                async def slow(*args,progress=None,**kwargs):
+                    progress('test installation stage');await asyncio.sleep(60)
+                with patch('zhilume_worker.installer.install',side_effect=slow):
+                    r=client.post('/management/api/install',headers=admin,json={**body,'execute':True,'planId':spec['planId']})
+                    self.assertEqual(r.status_code,200);oid=r.json()['operationId']
+                    self.assertEqual(client.post(f'/management/api/operations/{oid}/cancel',headers=schedule,json={}).status_code,401)
+                    self.assertTrue(client.get('/management/api/overview',headers=admin).json()['serviceOnline'])
+                    self.assertEqual(client.post(f'/management/api/operations/{oid}/cancel',headers=admin,json={}).status_code,200)
+                    for _ in range(100):
+                        op=next(o for o in client.get('/management/api/operations',headers=admin).json() if o['id']==oid)
+                        if op['state']!='running':break
+                        time.sleep(.01)
+                    self.assertEqual(op['state'],'cancelled')
+                    self.assertNotIn('_started',op)
+                    self.assertEqual(client.post(f'/management/api/operations/{oid}/cancel',headers=admin,json={}).status_code,200)
+
     def test_malformed_single_entry_does_not_break_overview(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(root/'config').mkdir();(root/'config/executors.json').write_text('{"image":"invalid","speech":{"enabled":false,"config":{}}}')
