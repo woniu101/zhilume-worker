@@ -18,21 +18,13 @@ import {
 } from "lucide-react";
 import { Brand, ThemePicker, executorNames, Status, statusNames } from "./ui";
 import "./style.css";
-let token = sessionStorage.getItem("worker-management") || "";
-async function api(path: string, method = "GET", body?: any) {
-  const response = await fetch("/management/api/" + path, {
-    method,
-    headers: {
-      Authorization: "Bearer " + token,
-      "Content-Type": "application/json",
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    signal: AbortSignal.timeout(20000),
-  });
-  const data = await response.json();
-  if (!response.ok) throw Error(data.detail || "请求失败");
-  return data;
-}
+import { api, token, setToken } from "./api";
+import {
+  EnvironmentPanel,
+  CheckResults,
+  OperationList,
+  ExecutorLogs,
+} from "./environment";
 function App() {
   const [busy, setBusy] = useState(false),
     [reachable, setReachable] = useState(false);
@@ -42,8 +34,6 @@ function App() {
     [page, setPage] = useState("overview");
   const [error, setError] = useState(""),
     [operations, setOperations] = useState<any[]>([]),
-    [config, setConfig] = useState(""),
-    [kind, setKind] = useState("image"),
     [access, setAccess] = useState<any>(null),
     [report, setReport] = useState<any>(null);
   const refreshing = useRef(false);
@@ -102,9 +92,6 @@ function App() {
       setError((e as Error).message);
     }
   }
-  const [installDir, setInstallDir] = useState(""),
-    [python, setPython] = useState(""),
-    [installPlan, setInstallPlan] = useState<any>(null);
   const names: Record<string, string> = {
     overview: "概览",
     executors: "执行器",
@@ -129,14 +116,6 @@ function App() {
   function changePage(next: string) {
     setPage(next);
     if (next === "access") void run(async () => setAccess(await api("access")));
-    if (next === "environment")
-      setConfig(
-        JSON.stringify(
-          data.executors.find((x: any) => x.id === kind)?.config || {},
-          null,
-          2,
-        ),
-      );
   }
   return (
     <div className={connected ? "app-shell" : "login-shell"}>
@@ -177,7 +156,7 @@ function App() {
             <button
               className="quiet"
               onClick={() => {
-                token = "";
+                setToken("");
                 sessionStorage.removeItem("worker-management");
                 window.location.reload();
               }}
@@ -213,7 +192,7 @@ function App() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  token = credential;
+                  setToken(credential);
                   sessionStorage.setItem("worker-management", token);
                   void run(refresh);
                 }}
@@ -433,14 +412,12 @@ function App() {
                 <article className="executor-card" key={x.id}>
                   <h2>
                     <Cpu size={20} />
-                    {
-                      {
-                        image: "Qwen / ComfyUI",
-                        speech: "IndexTTS",
-                        video: "H3",
-                      }[x.id as "image"]
-                    }
+                    {executorNames[x.id]}
                   </h2>
+                  <p className="description">
+                    运行方式：
+                    {x.id === "speech" ? "独立 Python 进程" : "ComfyUI 服务"}
+                  </p>
                   <div className="verification">
                     <Status state={x.state}>
                       状态：{statusNames[x.state] || x.state}
@@ -455,6 +432,7 @@ function App() {
                       {x.reason}
                     </p>
                   )}
+                  <CheckResults checks={x.checks || []} />
                   <div className="actions">
                     <button onClick={() => void act(`executors/${x.id}/check`)}>
                       检查环境与模型
@@ -490,137 +468,14 @@ function App() {
                   </small>
                 </article>
               ))}
-            {page === "environment" && (
-              <article>
-                <h2>
-                  <SlidersHorizontal size={18} />
-                  已有环境
-                </h2>
-                <p className="description">
-                  复用已有环境；程序、模型、Python
-                  与工作目录由配置指定。保存不会安装依赖、下载模型或运行 GPU。
-                </p>
-                <label>
-                  执行器
-                  <select
-                    value={kind}
-                    onChange={(e) => {
-                      setKind(e.target.value);
-                      setInstallPlan(null);
-                      setConfig(
-                        JSON.stringify(
-                          data.executors.find(
-                            (x: any) => x.id === e.target.value,
-                          )?.config || {},
-                          null,
-                          2,
-                        ),
-                      );
-                    }}
-                  >
-                    {["image", "speech", "video"].map((k) => (
-                      <option key={k} value={k}>
-                        {executorNames[k]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  onClick={() =>
-                    setConfig(
-                      JSON.stringify(
-                        data.executors.find((x: any) => x.id === kind)
-                          ?.config || {},
-                        null,
-                        2,
-                      ),
-                    )
-                  }
-                >
-                  读取当前配置
-                </button>
-                <label>
-                  部署配置 JSON
-                  <textarea
-                    spellCheck={false}
-                    rows={13}
-                    value={config}
-                    onChange={(e) => setConfig(e.target.value)}
-                  />
-                </label>
-                <button
-                  className="primary"
-                  onClick={() => {
-                    try {
-                      void act(
-                        `executors/${kind}/config`,
-                        JSON.parse(config),
-                        "PUT",
-                      );
-                    } catch {
-                      setError("JSON 格式无效");
-                    }
-                  }}
-                >
-                  保存配置并停用
-                </button>
-                <details>
-                  <summary>安装独立标准环境（Linux / WSL2）</summary>
-                  <p>
-                    只下载程序与依赖；不下载模型、不启动
-                    GPU。安装使用新目录，现有环境保持独立。
-                  </p>
-                  <label>
-                    新安装目录
-                    <input
-                      value={installDir}
-                      onChange={(e) => {
-                        setInstallDir(e.target.value);
-                        setInstallPlan(null);
-                      }}
-                    />
-                  </label>
-                  <label>
-                    已有 Python 绝对路径
-                    <input
-                      value={python}
-                      onChange={(e) => {
-                        setPython(e.target.value);
-                        setInstallPlan(null);
-                      }}
-                    />
-                  </label>
-                  <button
-                    onClick={() =>
-                      void api("install", "POST", {
-                        kind,
-                        directory: installDir,
-                        python,
-                      }).then(setInstallPlan, (e) => setError(e.message))
-                    }
-                  >
-                    查看安装计划
-                  </button>
-                  {installPlan && (
-                    <>
-                      <pre>{JSON.stringify(installPlan, null, 2)}</pre>
-                      <button
-                        onClick={() =>
-                          void act("install", {
-                            kind: installPlan.kind,
-                            directory: installPlan.directory,
-                            python,
-                            execute: true,
-                          })
-                        }
-                      >
-                        执行依赖安装
-                      </button>
-                    </>
-                  )}
-                </details>
-              </article>
-            )}
+            <div hidden={page !== "environment"}>
+              <EnvironmentPanel
+                data={data}
+                refresh={refresh}
+                reportError={setError}
+                operations={operations}
+              />
+            </div>
             {page === "access" && access && (
               <article>
                 <h2>
@@ -704,6 +559,7 @@ function App() {
             )}
             {page === "diagnostics" && (
               <article>
+                <ExecutorLogs />
                 <h2>
                   <FileText size={18} />
                   脱敏诊断报告
@@ -752,17 +608,7 @@ function App() {
                 )}
               </article>
             )}
-            {operations.length > 0 && (
-              <article>
-                <h2>部署操作</h2>
-                {operations.slice(-5).map((o) => (
-                  <p key={o.id}>
-                    {o.name} · {o.state}
-                    {o.error ? " · " + o.error : ""}
-                  </p>
-                ))}
-              </article>
-            )}
+            <OperationList operations={operations} />
           </main>
         )}
       </div>

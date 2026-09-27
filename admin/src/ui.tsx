@@ -112,9 +112,9 @@ export function Brand() {
 }
 
 export const executorNames: Record<string, string> = {
-  image: "Qwen / ComfyUI",
-  speech: "IndexTTS",
-  video: "H3",
+  image: "Qwen 图片",
+  speech: "IndexTTS 语音",
+  video: "H3 视频",
 };
 export const statusNames: Record<string, string> = {
   disabled: "已停用",

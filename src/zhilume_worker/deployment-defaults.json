@@ -1,0 +1,158 @@
+{
+  "image": {
+    "url": "http://127.0.0.1:8188",
+    "exclusive": true,
+    "timeoutSeconds": 1800,
+    "profiles": [
+      {
+        "modelId": "qwen-image-2512",
+        "models": {
+          "diffusion": "qwen_image_2512_fp8_e4m3fn.safetensors",
+          "clip": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+          "vae": "qwen_image_vae.safetensors"
+        },
+        "maxSize": 1536,
+        "defaultSteps": 50,
+        "identity": {
+          "revision": "qwen-image-2512-release",
+          "quantization": "",
+          "artifacts": {
+            "diffusion": "",
+            "clip": "",
+            "vae": ""
+          }
+        }
+      },
+      {
+        "modelId": "qwen-image-2.1",
+        "models": {
+          "diffusion": "qwen_image_2.1_int8_convrot.safetensors",
+          "clip": "qwen3vl_8b_int8_convrot.safetensors",
+          "vae": "qwen_image_2.1_vae_bf16.safetensors"
+        },
+        "maxReferences": 4,
+        "maxSize": 1536,
+        "referenceResolution": 1024,
+        "defaultSteps": 25,
+        "identity": {
+          "revision": "qwen-image-2.1-release",
+          "quantization": "",
+          "artifacts": {
+            "diffusion": "",
+            "clip": "",
+            "vae": ""
+          }
+        }
+      }
+    ]
+  },
+  "speech": {
+    "python": "/opt/index-tts/.venv/bin/python",
+    "repository": "/opt/index-tts",
+    "modelDirectory": "/opt/index-tts/checkpoints",
+    "ffmpeg": "/usr/bin/ffmpeg",
+    "maxTextCharacters": 1000,
+    "enableEmotionText": false,
+    "identity": {
+      "revision": "indextts2.5-release",
+      "quantization": "",
+      "artifacts": {
+        "tts": ""
+      }
+    },
+    "device": "cuda:0"
+  },
+  "video": {
+    "url": "http://127.0.0.1:8188",
+    "exclusive": true,
+    "timeoutSeconds": 3600,
+    "ffmpeg": "/usr/bin/ffmpeg",
+    "ffprobe": "/usr/bin/ffprobe",
+    "profiles": [
+      {
+        "modelId": "minimax-h3-fl2va",
+        "models": {
+          "diffusion": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+          "clip": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "vae": "minimax_h3_video_vae_fp16.safetensors",
+          "audioVae": "minimax_h3_audio_vae_fp32.safetensors"
+        },
+        "sizes": [
+          [
+            512,
+            288
+          ],
+          [
+            288,
+            512
+          ],
+          [
+            512,
+            512
+          ]
+        ],
+        "frames": [
+          124
+        ],
+        "defaultSteps": 20,
+        "referenceLimits": {
+          "image": 2,
+          "video": 1,
+          "audio": 1
+        },
+        "identity": {
+          "revision": "minimax-h3-fl2va-release",
+          "quantization": "",
+          "artifacts": {
+            "diffusion": "",
+            "clip": "",
+            "vae": "",
+            "audioVae": ""
+          }
+        }
+      },
+      {
+        "modelId": "minimax-h3-ref2va",
+        "models": {
+          "diffusion": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+          "clip": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+          "vae": "minimax_h3_video_vae_fp16.safetensors",
+          "audioVae": "minimax_h3_audio_vae_fp32.safetensors"
+        },
+        "sizes": [
+          [
+            512,
+            288
+          ],
+          [
+            288,
+            512
+          ],
+          [
+            512,
+            512
+          ]
+        ],
+        "frames": [
+          124
+        ],
+        "defaultSteps": 20,
+        "referenceLimits": {
+          "image": 2,
+          "video": 1,
+          "audio": 1
+        },
+        "identity": {
+          "revision": "minimax-h3-ref2va-release",
+          "quantization": "",
+          "artifacts": {
+            "diffusion": "",
+            "clip": "",
+            "vae": "",
+            "audioVae": ""
+          }
+        }
+      }
+    ]
+  }
+}

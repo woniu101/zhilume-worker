@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Protocol
 from .resources import hardware, ResourceLease
+from .environment import inspect_environment, validate_structure
 
 
 class Executor(Protocol):
@@ -65,17 +66,39 @@ class ExecutorManager:
                     if hasattr(previous, 'http'): await previous.http.aclose()
                     self.instances.pop(kind)
                 else: await self._stop(kind)
-            self.states[kind] = {'state': 'checking', 'reason': '', 'inferenceVerified': False}
+            self.states[kind] = {'state': 'checking', 'reason': '', 'inferenceVerified': False, 'checks': []}
             instance = None
             resource = None
             try:
-                module, cls = ADAPTERS[kind]
-                factory = getattr(importlib.import_module('.' + module, __package__), cls)
                 config = self.entries.get(kind, {}).get('config', {})
-                instance = factory(config)
+                validate_structure(kind, config)
+                checks = self.states[kind]['checks']
+                await inspect_environment(kind, config, checks)
+                spec = dict(id='specification', title='模型执行规格', state='checking', detail='', remedy='在模型配置中填写实际权重版本、量化和每个组件的固定标识；不要填写本机路径或示例占位符。')
+                checks.append(spec)
+                try:
+                    module, cls = ADAPTERS[kind]
+                    factory = getattr(importlib.import_module('.' + module, __package__), cls)
+                    instance = factory(config)
+                    spec.update(state='passed', detail='执行规格有效；尚未验证模型文件与推理', remedy='')
+                except Exception as error:
+                    spec.update(state='failed', detail=str(error) if isinstance(error, (ValueError, ModuleNotFoundError)) else '执行规格无效，请检查必填参数')
+                gpu = dict(id='gpu', title='GPU 可见性', state='checking', detail='', remedy='确认 NVIDIA 驱动与容器设备映射；无 GPU 时仍可保存配置。')
+                checks.append(gpu)
                 self.gpus = await hardware()
-                if not self.gpus: raise ValueError('未发现 NVIDIA GPU；可保存环境配置，推理尚未就绪')
-                await instance.check()
+                gpu.update(state='passed' if self.gpus else 'failed', detail=f'发现 {len(self.gpus)} 张 GPU' if self.gpus else '未发现 NVIDIA GPU', remedy='' if self.gpus else gpu['remedy'])
+                models = dict(id='models', title='模型文件与工作流', state='checking' if instance else 'skipped', detail='' if instance else '请先修正模型执行规格', remedy='检查模型文件或公共库软链接，并核对 ComfyUI 模型列表、所需节点或 IndexTTS 固定代码版本。')
+                checks.append(models)
+                if instance and any(c['id'] == 'service' and c['state'] == 'failed' for c in checks):
+                    models.update(state='skipped', detail='ComfyUI 服务不可达，未检查远端模型文件')
+                elif instance:
+                    try:
+                        await instance.check()
+                        models.update(state='passed', detail='文件与工作流检查通过；未运行推理', remedy='')
+                    except Exception as error:
+                        models.update(state='failed', detail=str(error) if isinstance(error, (ValueError, FileNotFoundError, ModuleNotFoundError)) else type(error).__name__ + '：服务或模型检查失败')
+                failed = [c for c in checks if c['state'] == 'failed']
+                if failed: raise ValueError('；'.join(c['title'] + '：' + c['detail'] for c in failed))
                 if enable:
                     resource = self.worker.quarantined_lease or ResourceLease([g['uuid'] for g in self.gpus], self.worker.worker_id + ':' + kind, recovery=True)
                     if not self.worker.quarantined_lease: await resource.acquire()
@@ -90,24 +113,24 @@ class ExecutorManager:
                     (self.root / 'resource-quarantine.json').unlink(missing_ok=True)
                 self.instances[kind] = instance
                 self.states[kind]['state'] = 'ready' if enable else 'checked'
-                self.entries[kind]['enabled'] = enable
+                self.entries.setdefault(kind, {'config': config})['enabled'] = enable
                 self.persist()
             except Exception as error:
                 if resource and resource.files and resource.owner == self.worker.worker_id + ':' + kind:
                     self.worker.quarantined_lease = resource
                     (self.root / 'resource-quarantine.json').write_text('{"releaseConfirmed":false}')
                 if instance and hasattr(instance, 'http'): await instance.http.aclose()
-                self.states[kind] = {'state': 'error', 'reason': str(error) if isinstance(error, (ValueError, FileNotFoundError, ModuleNotFoundError)) else type(error).__name__ + '：环境检查失败，请检查服务地址与依赖', 'inferenceVerified': False}
+                self.states[kind] = {'state': 'error', 'reason': str(error) if isinstance(error, (ValueError, FileNotFoundError, ModuleNotFoundError)) else type(error).__name__ + '：环境检查失败，请检查服务地址与依赖', 'inferenceVerified': False, 'checks': self.states[kind].get('checks', [])}
             await self.worker.hello()
             return self.states[kind]
 
     async def configure(self, kind, config):
         async with self.actions:
-            if kind not in ADAPTERS or not isinstance(config, dict): raise ValueError('执行器配置无效')
+            validate_structure(kind, config)
             if self.worker.active: raise ValueError('任务执行中，不能修改环境')
             if kind in self.instances: await self._stop(kind)
             self.entries[kind] = {'enabled': False, 'config': config}; self.persist()
-            self.states[kind] = {'state': 'disabled', 'reason': '配置已保存，请显式检查并启用', 'inferenceVerified': False}
+            self.states[kind] = {'state': 'disabled', 'reason': '配置已保存，请显式检查并启用', 'inferenceVerified': False, 'checks': []}
             await self.worker.hello()
 
     async def disable(self, kind, policy):

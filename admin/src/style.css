@@ -790,3 +790,164 @@ summary {
     margin-bottom: 8px;
   }
 }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
+}
+.form-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.form-toolbar label {
+  min-width: 220px;
+}
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.checkbox-field input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.checkbox-field small {
+  flex-basis: 100%;
+  line-height: 1.6;
+}
+.profile-card {
+  border: 1px solid var(--border);
+  padding: 20px;
+  border-radius: 10px;
+  margin: 18px 0;
+  background: var(--bg);
+}
+h3 {
+  font-size: 15px;
+  margin: 0;
+}
+h4 {
+  font-size: 13px;
+  font-weight: 500;
+}
+.model-heading {
+  margin-top: 26px;
+  flex-wrap: wrap;
+}
+.model-heading .actions {
+  margin: 0;
+}
+.model-heading select {
+  width: auto;
+  max-width: 100%;
+}
+.array-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.array-row label {
+  flex: 1;
+  min-width: 0;
+}
+.identity-fields summary span {
+  font-size: 12px;
+  margin-left: 10px;
+}
+.check-results {
+  margin: 20px 0;
+  display: grid;
+  gap: 10px;
+}
+.check-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 13px;
+}
+.check-item svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--muted);
+}
+.check-item.passed svg {
+  color: var(--accent);
+}
+.check-item.failed svg {
+  color: var(--danger);
+}
+.check-item > div {
+  min-width: 0;
+  flex: 1;
+}
+.check-item strong {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.check-item strong span {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 12px;
+}
+.check-item p {
+  margin: 8px 0;
+  font-size: 12px;
+}
+.check-item small {
+  line-height: 1.6;
+  display: block;
+  overflow-wrap: anywhere;
+}
+.operation-row {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.operation-row > div {
+  flex: 1;
+}
+.operation-row small {
+  display: block;
+  margin-top: 8px;
+}
+.operation-row > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.executor-logs {
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+}
+.notice {
+  color: var(--accent);
+  font-size: 13px;
+}
+[hidden] {
+  display: none !important;
+}
+@media (max-width: 720px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .model-heading .actions {
+    width: 100%;
+  }
+  .model-heading select {
+    flex: 1;
+    min-width: 0;
+  }
+}
