@@ -6,12 +6,13 @@ import uuid
 from pathlib import Path, PurePosixPath
 
 import httpx
-from PIL import Image
+
 
 from .image_workflows import profiles, validate_environment, build_graph
 
 
 def normalize_image(path, output_format):
+    from PIL import Image
     with Image.open(path) as image:
         if image.width * image.height > 20_000_000:
             raise ValueError("生成图片超出像素限制")
@@ -42,12 +43,42 @@ class ComfyExecutor:
         self.http = httpx.AsyncClient(base_url=config["url"].rstrip("/"), timeout=60, transport=transport)
         self.endpoint_id = hashlib.sha256(config["url"].rstrip("/").encode()).hexdigest()
         self.poisoned = False
+        self.idle_vram_limit = config.get('idleVramLimitMiB', 1536)
+        if type(self.idle_vram_limit) is not int or not 256 <= self.idle_vram_limit <= 4096:
+            raise ValueError('卸载后的显存上限应为 256–4096 MiB，按专用服务空载基线设置')
+
+    async def release(self):
+        if self.poisoned: raise ValueError('ComfyUI 状态未确认，不能释放资源锁')
+        queue = (await self.http.get('/queue')).json()
+        if queue.get('queue_running') or queue.get('queue_pending'): raise ValueError('ComfyUI 仍有任务')
+        response = await self.http.post('/free', json={'unload_models': True, 'free_memory': True})
+        response.raise_for_status()
+        stable = 0
+        for _ in range(60):
+            stats = await self.http.get('/system_stats'); stats.raise_for_status()
+            devices = stats.json().get('devices', [])
+            # Comfy adds unused torch reservations to vram_free. Add them back when
+            # measuring physical occupancy; cudaMallocAsync/custom allocations are
+            # not reliably reflected in active_bytes alone. /free is asynchronous.
+            def unloaded(d):
+                fields = ('vram_total', 'vram_free', 'torch_vram_total', 'torch_vram_free')
+                if any(type(d.get(k)) not in (int, float) for k in fields): return False
+                physical_used = d['vram_total'] - d['vram_free'] + d['torch_vram_free']
+                return d['type'] == 'cuda' and physical_used <= self.idle_vram_limit * 1024 ** 2 and d['torch_vram_total'] - d['torch_vram_free'] < 64 * 1024 ** 2
+            stable = stable + 1 if devices and all(unloaded(d) for d in devices) else 0
+            if stable >= 2: return
+            await asyncio.sleep(1)
+        raise ValueError('ComfyUI 显存释放未确认')
 
     @classmethod
     def from_file(cls, path):
         return cls(json.loads(Path(path).read_text("utf-8")))
 
     async def check(self):
+        try:
+            import PIL
+        except ModuleNotFoundError:
+            raise ValueError('缺少图片适配器依赖：请显式安装 zhilume-worker[image]，核心管理服务无需此依赖') from None
         response = await self.http.get("/object_info")
         response.raise_for_status()
         for profile in self.profiles:

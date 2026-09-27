@@ -3,7 +3,7 @@ import asyncio
 import json
 import math
 from pathlib import Path
-from PIL import Image
+
 from .comfy import ComfyExecutor
 from .processes import run_child
 from . import video_workflows as workflows
@@ -35,6 +35,7 @@ class VideoExecutor(ComfyExecutor):
             source = sources[ref['assetId']]
             if ref['role'] in ('image', 'first', 'last'):
                 def image():
+                    from PIL import Image
                     with Image.open(source) as img:
                         if img.width * img.height > 20_000_000: raise ValueError('参考图片超过 2000 万像素')
                         img.load()

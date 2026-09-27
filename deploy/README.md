@@ -1,5 +1,7 @@
 # 优云智算部署准备
 
+**当前 Worker 0.9 的安装、管理、权限和镜像基线见 [管理部署说明](management.md)。下文云端记录是旧版模型能力验收，不能替代 0.9 资源释放与控制接口的 GPU 验收。**
+
 优先上海二 A，华北二 A 后续验证。2026-09-26 已创建上海二 A RTX 5090 实例，完成真实部署、推理、素材传输、取消及 Server 重连验收。固定环境见 [comfy-runtime.json](comfy-runtime.json)，完整样本报告见 [Server 云端验收记录](https://github.com/woniu101/zhilume-server/blob/main/docs/cloud-acceptance-2026-09-26.md)。部署到专用目录，不修改其他项目的 ComfyUI 或 Python 环境。
 
 实测配置为 5090 32GB 显存、14 vCPU、48 GiB 内存、100 GiB 系统盘。64 GiB 规格虽然预检通过，实际创建时资源不足；48 GiB 在同一区域创建成功。库存与入口需要每次现场确认。
@@ -18,7 +20,7 @@ bash deploy/run-comfy.sh
 
 ## 1. 安装独立 Worker
 
-在已有实例克隆本仓库，安装 uv 后运行 `bash deploy/install.sh`。使用单独 Python 3.12 环境和 `uv.lock`，不会修改镜像自带的 Python 3.10，也不安装 Torch 或下载模型。云端 FFmpeg 可保留供生成工作流使用；普通视频截取和抽音轨由 Studio / Server 自带 FFmpeg 执行，不依赖此实例。
+安装预构建 wheel，按 [管理部署说明](management.md) 设置 ZHILUME_WHEEL 与 ZHILUME_PROGRAM 后运行 `bash deploy/install.sh`。使用单独 Python 3.12 环境和 `uv.lock`，不会修改镜像自带的 Python 3.10，也不安装 Torch 或下载模型。云端 FFmpeg 可保留供生成工作流使用；普通视频截取和抽音轨由 Studio / Server 自带 FFmpeg 执行，不依赖此实例。
 
 ## 2. 链接公共权重
 

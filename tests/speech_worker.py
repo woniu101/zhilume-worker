@@ -1,3 +1,4 @@
+import fixture_worker
 """CPU integration fixture only: replace model preflight, never the production transport/runner."""
 from zhilume_worker.speech import SpeechExecutor
 from zhilume_worker.__main__ import main

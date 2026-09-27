@@ -40,7 +40,7 @@ def main():
     if not torch.cuda.is_available():
         raise RuntimeError('GPU execution requires CUDA; refusing CPU fallback')
     model = IndexTTS2(cfg_path=str(Path(config['modelDirectory']) / 'config.yaml'), model_dir=config['modelDirectory'],
-                      use_bf16=True, device='cuda:0', use_cuda_kernel=False, use_deepspeed=False, use_qwen_emo=config.get('enableEmotionText', False))
+                      use_bf16=True, device=config.get('device', 'cuda:0'), use_cuda_kernel=False, use_deepspeed=False, use_qwen_emo=config.get('enableEmotionText', False))
     raw = str(Path(request['output']).with_name('raw-speech.wav'))
     model.infer(**infer_kwargs(request['input'], request['clips']), output_path=raw)
     import subprocess

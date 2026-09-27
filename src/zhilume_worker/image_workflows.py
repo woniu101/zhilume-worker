@@ -1,3 +1,4 @@
+from .specification import sign
 """Versioned, independently authored ComfyUI API graphs; no GPU work on import."""
 import hashlib
 import json
@@ -36,8 +37,8 @@ def profiles(config):
         public = dict(modelId=model["id"], workflowRevision=model["workflowRevision"], operations=operations,
                       maxReferences=refs, formats=model["formats"], minSize=256, maxSize=maximum, sizeStep=32,
                       referenceResolution=resolution, defaultSteps=steps, maxSteps=100, validation="unverified")
-        identity = json.dumps({**public, "models": files}, sort_keys=True, separators=(",", ":"))
-        public["profileId"] = hashlib.sha256(identity.encode()).hexdigest()
+        if set(entry.get('identity', {}).get('artifacts', {})) != set(files): raise ValueError('执行规格必须标识所有权重组件')
+        sign(public, entry.get('identity'))
         if any(p["public"]["profileId"] == public["profileId"] for p in result):
             raise ValueError("执行配置重复")
         result.append({"public": public, "models": files})

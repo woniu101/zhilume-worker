@@ -12,6 +12,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request, WebSocket, HTTPException, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from .worker import Worker
+from .management import attach_management
 
 
 def identity(root):
@@ -35,11 +36,15 @@ def create_app(args):
 
     @asynccontextmanager
     async def lifespan(app):
-        await worker.start()
+        from .resources import StateLock
+        lock = StateLock(worker.root); lock.acquire()
         try:
+            await worker.start()
             yield
         finally:
-            await worker.close()
+            await app.state.close_management()
+            try: await worker.close()
+            finally: lock.release()
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.worker = worker
@@ -60,7 +65,7 @@ def create_app(args):
     @app.get("/api/v1/system")
     async def system(request: Request):
         auth(request.headers)
-        return {"name": "Zhilume Worker", "workerId": worker.worker_id, "workerName": args.name, "platform": platform.system(), "protocolVersion": "2.0", "boundServerId": owner}
+        return {"name": "Zhilume Worker", "workerId": worker.worker_id, "workerName": args.name, "platform": platform.system(), "protocolVersion": "3.0", "boundServerId": owner}
 
     @app.websocket("/api/v1/connect")
     async def connect(socket: WebSocket):
@@ -141,4 +146,9 @@ def create_app(args):
             raise HTTPException(409, "输出尚未准备好")
         return FileResponse(state["output"], media_type="application/octet-stream")
 
+    async def unbind():
+        nonlocal owner
+        if worker.socket: await worker.socket.close(code=1000)
+        owner_file.unlink(missing_ok=True); owner = None
+    attach_management(app, worker, credentials, lambda: owner, unbind)
     return app

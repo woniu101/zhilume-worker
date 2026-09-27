@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 umask 077
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
-command -v uv >/dev/null || { echo '请先安装 uv，再运行本脚本。'; exit 1; }
-# Worker uses its own Python; never modify the image's ComfyUI Python environment.
-uv sync --frozen --python 3.12
-uv run --no-sync zhilume-prepare
-echo 'Worker 安装完成；没有启动 ComfyUI、GPU 或接单进程。'
+# Install a prebuilt wheel, including React static files. Deployment requires no Node.js.
+: "${ZHILUME_WHEEL:?Specify the release wheel path}"
+: "${ZHILUME_PROGRAM:?Specify a NEW program directory, separate from persistent data}"
+[[ ! -e "$ZHILUME_PROGRAM" ]] || { echo 'Program directory exists; use a new versioned directory for upgrade.'; exit 1; }
+command -v uv >/dev/null || { echo 'Install uv explicitly first.'; exit 1; }
+uv venv --python "${ZHILUME_PYTHON:-3.12}" "$ZHILUME_PROGRAM"
+uv pip install --python "$ZHILUME_PROGRAM/bin/python" "$ZHILUME_WHEEL"
+echo 'Core installed. No Torch, model download, GPU inference or service startup performed.'

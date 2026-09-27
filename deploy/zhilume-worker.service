@@ -1,0 +1,16 @@
+[Unit]
+Description=Zhilume Worker control service
+After=network-online.target
+[Service]
+Type=simple
+User=zhilume
+WorkingDirectory=/var/lib/zhilume-worker
+ExecStart=/opt/zhilume-worker/current/bin/zhilume-worker --host 127.0.0.1 --port 4320 --state /var/lib/zhilume-worker
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=90
+UMask=0077
+Environment=ZHILUME_RESOURCE_LOCK_DIR=/var/lib/zhilume-gpu-locks
+[Install]
+WantedBy=multi-user.target

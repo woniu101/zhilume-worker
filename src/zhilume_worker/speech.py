@@ -1,3 +1,4 @@
+from .specification import sign
 """IndexTTS adapter. Inference lives in its own Python environment and owned process."""
 import asyncio
 import hashlib
@@ -16,9 +17,8 @@ def public_profile(config):
     limit = config.get('maxTextCharacters', 1000)
     if type(limit) is not int or not 1 <= limit <= MODEL['maxTextCharacters'] or type(config.get('enableEmotionText', False)) is not bool:
         raise ValueError('语音配置无效')
-    fingerprint = hashlib.sha256(json.dumps({'config': config, 'workflow': MODEL['workflowRevision'], 'upstream': MODEL['upstreamRevision']}, sort_keys=True).encode()).hexdigest()
-    return dict(modelId=MODEL['id'], profileId=fingerprint, workflowRevision=MODEL['workflowRevision'], upstreamRevision=MODEL['upstreamRevision'],
-                maxTextCharacters=limit, languages=MODEL['languages'], emotionModes=MODEL['emotionModes'] if config.get('enableEmotionText') else ['follow', 'reference', 'vector'], validation='unverified')
+    return sign(dict(modelId=MODEL['id'], workflowRevision=MODEL['workflowRevision'], upstreamRevision=MODEL['upstreamRevision'],
+                maxTextCharacters=limit, languages=MODEL['languages'], emotionModes=MODEL['emotionModes'] if config.get('enableEmotionText') else ['follow', 'reference', 'vector'], validation='unverified'), config.get('identity'))
 
 
 def validate_input(value, profile):
@@ -48,8 +48,13 @@ def validate_input(value, profile):
 
 
 class SpeechExecutor:
+    async def release(self):
+        # Each invocation owns and awaits its Python child; no resident inference process.
+        return
+
     def __init__(self, config):
         self.config = config
+        if not __import__('re').fullmatch(r'cuda:\d+', config.get('device', 'cuda:0')): raise ValueError('语音设备须明确为 cuda:N')
         self.profile = public_profile(config)
         self.ready = False
 
@@ -110,7 +115,7 @@ class SpeechExecutor:
         request = directory / 'speech-request.json'
         request.write_text(json.dumps({'config': self.config, 'input': source, 'clips': clips, 'output': str(output), 'parentPid': os.getpid()}), 'utf-8')
         await progress('加载 IndexTTS 并合成语音')
-        await self.run_child([self.config['python'], str(Path(__file__).with_name('speech_runner.py')), str(request)], self.config['repository'], directory / 'speech.log')
+        await self.run_child([self.config['python'], str(Path(__file__).with_name('speech_runner.py')), str(request)], self.config.get('workingDirectory', self.config['repository']), directory / 'speech.log')
         await progress('校验语音结果')
         if not output.is_file() or output.stat().st_size > 64 * 1024 ** 2:
             raise ValueError('语音输出缺失或过大')

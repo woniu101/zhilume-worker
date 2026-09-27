@@ -1,3 +1,4 @@
+from fixture_identity import fixture_config
 import asyncio
 import io
 import json
@@ -5,14 +6,14 @@ import tempfile
 import unittest
 import uuid
 from pathlib import Path
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import httpx
 from PIL import Image
 from zhilume_worker.comfy import ComfyExecutor, normalize_image
 from zhilume_worker.image_workflows import profiles, build_graph, validate_environment, MODELS
 
-CONFIG = json.loads((Path(__file__).parent.parent / "config/comfy.example.json").read_text())
+CONFIG = fixture_config(json.loads((Path(__file__).parent.parent / "config/comfy.example.json").read_text()))
 
 
 def inventory():
@@ -29,6 +30,19 @@ def request(profile, refs=None, **overrides):
 
 
 class ImagesTest(unittest.IsolatedAsyncioTestCase):
+    async def test_release_waits_for_physical_vram_not_only_torch_active_bytes(self):
+        samples = []
+        def handler(request):
+            if request.url.path == '/queue': return httpx.Response(200,json={'queue_running':[],'queue_pending':[]})
+            if request.url.path == '/free': return httpx.Response(200,json={})
+            samples.append(1)
+            used = 20000 if len(samples) == 1 else 800
+            return httpx.Response(200,json={'devices':[{'type':'cuda','vram_total':32768*1024**2,'vram_free':(32768-used+55)*1024**2,'torch_vram_total':64*1024**2,'torch_vram_free':55*1024**2}]})
+        executor=ComfyExecutor(CONFIG,transport=httpx.MockTransport(handler))
+        with patch('zhilume_worker.comfy.asyncio.sleep',new=AsyncMock()): await executor.release()
+        self.assertEqual(len(samples),3)
+        await executor.http.aclose()
+
     def test_reference_cap_cannot_exceed_model_contract(self):
         config = json.loads(json.dumps(CONFIG))
         config["profiles"][1]["maxReferences"] = 10

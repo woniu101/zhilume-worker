@@ -24,7 +24,7 @@ class GatewayTests(unittest.TestCase):
             raw = b"fixture bytes"
             digest = hashlib.sha256(raw).hexdigest()
             def message(kind, payload=None):
-                return {"protocolVersion": "2.0", "messageId": str(uuid.uuid4()), "type": kind, "payload": payload or {}, **job}
+                return {"protocolVersion": "3.0", "messageId": str(uuid.uuid4()), "type": kind, "payload": payload or {}, **job}
             with TestClient(app) as client:
                 self.assertEqual(client.get("/api/v1/system").status_code, 401)
                 self.assertEqual(client.get("/api/v1/system", headers=headers).json()["workerId"], credentials["workerId"])

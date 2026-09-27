@@ -9,9 +9,8 @@ from pathlib import Path
 
 import jsonschema
 
-from .comfy import ComfyExecutor
-from .speech import SpeechExecutor
-from .video import VideoExecutor
+from .executors import ExecutorManager
+from .resources import ResourceLease
 
 LOG = logging.getLogger("zhilume.worker")
 CAPABILITIES = ["mock.text.echo.v1", "mock.media.copy.v1"]
@@ -22,19 +21,27 @@ VALIDATOR = jsonschema.Draft7Validator(SCHEMA)
 class Worker:
     def __init__(self, args):
         self.args = args
-        self.comfy = ComfyExecutor.from_file(args.comfy_config) if getattr(args, "enable_image_execution", False) else None
-        self.speech = SpeechExecutor.from_file(args.speech_config) if getattr(args, "enable_speech_execution", False) else None
-        self.video = VideoExecutor.from_file(args.video_config) if getattr(args, "enable_video_execution", False) else None
         self.capabilities = list(CAPABILITIES)
         self.root = Path(args.state).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.active = {}
         self.socket = None
         self.send_lock = asyncio.Lock()
+        self.manager = ExecutorManager(self)
+        self.quarantined_lease = None
 
+
+    @property
+    def comfy(self): return self.manager.ready('image')
+    @property
+    def speech(self): return self.manager.ready('speech')
+    @property
+    def video(self): return self.manager.ready('video')
+    @property
+    def resource_ids(self): return [g['uuid'] for g in self.manager.gpus] or ['cpu:' + getattr(self, 'worker_id', 'unbound')]
 
     async def send(self, kind, payload=None, job=None, **extras):
-        message = {"protocolVersion": "2.0", "messageId": str(uuid.uuid4()), "type": kind, "payload": payload or {}, **extras}
+        message = {"protocolVersion": "3.0", "messageId": str(uuid.uuid4()), "type": kind, "payload": payload or {}, **extras}
         if job:
             message.update({key: job[key] for key in ("jobId", "attemptId", "leaseId")})
         VALIDATOR.validate(message)
@@ -49,6 +56,9 @@ class Worker:
         directory = self.root / "attempts" / job["attemptId"]
         directory.mkdir(parents=True, exist_ok=True)
         state = self.active[job["attemptId"]]
+        lease = None
+        executor = None
+        terminal_message = None
         try:
             await self.send("task.accepted", job=job)
             await state["inputs_ready"].wait()
@@ -63,6 +73,12 @@ class Worker:
                 output = directory / ("output" + Path(filename).suffix)
                 await self.download(job, source["asset"], output)
             elif (operation.startswith("image.") and self.comfy) or (operation == "audio.speech.v1" and self.speech) or (operation == "video.generate.v1" and self.video):
+                kind = 'video' if operation.startswith('video.') else 'speech' if operation.startswith('audio.') else 'image'
+                lease = ResourceLease(self.resource_ids, self.worker_id + ':' + kind)
+                await lease.acquire()
+                if self.quarantined_lease: raise ValueError('GPU 资源处于隔离状态，须由管理员诊断')
+                executor = self.manager.ready(kind)
+                lease.mark_in_use()
                 references = source["referenceAssets"]
                 if [a["id"] for a in references] != source["referenceAssetIds"]:
                     raise ValueError("参考素材顺序不一致")
@@ -104,16 +120,37 @@ class Worker:
                     await asyncio.wait_for(state["committed"].wait(), 3)
                 except asyncio.TimeoutError:
                     pass
+            if executor:
+                kind = 'image' if operation.startswith('image.') else 'speech' if operation.startswith('audio.') else 'video'
+                self.manager.states[kind]['inferenceVerified'] = True
             shutil.rmtree(directory)
             LOG.info("任务已由 Server 归档 %s", job["jobId"])
         except asyncio.CancelledError:
-            await self.send("task.cancelled", {"reason": "cancelled_or_lease_expired"}, job)
+            terminal_message = ("task.cancelled", {"reason": "cancelled_or_lease_expired"})
             LOG.info("任务已停止 %s", job["jobId"])
         except Exception as error:
             LOG.warning("任务执行失败 %s (%s)", job["jobId"], type(error).__name__)
-            await self.send("task.failed", {"message": str(error) if isinstance(error, ValueError) else "执行失败，请检查网络、编码和本地磁盘"}, job)
+            terminal_message = ("task.failed", {"message": str(error) if isinstance(error, ValueError) else "执行失败，请检查网络、编码和本地磁盘"})
         finally:
+            if executor:
+                try:
+                    await asyncio.shield(executor.release())
+                    lease.confirm_released()
+                except Exception:
+                    if not terminal_message or terminal_message[0] == "task.cancelled": terminal_message = ("task.failed", {"message": "GPU 资源释放未确认，已隔离执行端"})
+                    self.quarantined_lease = lease
+                    (self.root / "resource-quarantine.json").write_text('{"releaseConfirmed":false}')
+                    for state in self.manager.states.values(): state.update(state='error', reason='GPU 释放未确认，执行资源已隔离')
+                    lease = None
+            if lease: lease.release()
             self.active.pop(job["attemptId"], None)
+            if executor:
+                folder = self.root / 'logs'; folder.mkdir(exist_ok=True)
+                kind = 'image' if operation.startswith('image.') else 'speech' if operation.startswith('audio.') else 'video'
+                with (folder / (kind + '.jsonl')).open('a', encoding='utf-8') as log:
+                    log.write(json.dumps({'jobId':job['jobId'], 'attemptId':job['attemptId'], 'result':terminal_message[0] if terminal_message else 'archived', 'resourceReleased':not bool(self.quarantined_lease)}) + '\n')
+            if terminal_message: await self.send(terminal_message[0], terminal_message[1], job)
+            await self.hello()
             if (self.comfy and self.comfy.poisoned) or (self.video and self.video.poisoned):
                 if self.comfy and self.video and self.comfy.endpoint_id == self.video.endpoint_id:
                     self.comfy.poisoned = self.video.poisoned = True
@@ -138,7 +175,7 @@ class Worker:
         speech_profiles = self.speech.public_profiles if self.speech else []
         video_profiles = self.video.public_profiles if self.video else []
         capabilities = (["video.generate.v1"] if video_profiles else []) + (["audio.speech.v1"] if speech_profiles else []) + self.capabilities + sorted({op for p in image_profiles for op in p["operations"]})
-        await self.send("hello", {"workerId": self.worker_id, "capabilities": capabilities, "imageProfiles": image_profiles, "speechProfiles": speech_profiles, "videoProfiles": video_profiles, "activeAttempts": list(self.active)})
+        await self.send("hello", {"workerId": self.worker_id, "capabilities": capabilities, "executionSpecs": [{"kind": k, "spec": p} for k, profiles in [("image", image_profiles), ("speech", speech_profiles), ("video", video_profiles)] for p in profiles], "deployment": {"capacity": 1, "resourceIds": self.resource_ids}, "activeAttempts": list(self.active)})
         for state in list(self.active.values()):
             if not state["inputs_ready"].is_set():
                 await self.send("task.accepted", job=state["job"])
@@ -198,28 +235,18 @@ class Worker:
             self.cancel(state)
         elif kind == "task.commit_ack" and state:
             state["committed"].set()
-            self.active.pop(attempt, None)
         elif kind == "error":
             LOG.warning("Server 协议提示: %s", message["payload"].get("code"))
 
     async def start(self):
-        if self.video:
-            await self.video.check()
-            await self.video.recover(self.root)
-        if self.speech:
-            await self.speech.check()
-        if self.comfy:
-            await self.comfy.check()
-            await self.comfy.recover(self.root)
         self.maintenance_task = asyncio.create_task(self.maintenance())
+        self.startup_task = asyncio.create_task(self.manager.start())
 
     async def close(self):
         self.maintenance_task.cancel()
-        tasks = [state["task"] for state in list(self.active.values())]
-        for state in list(self.active.values()):
-            self.cancel(state)
-        await asyncio.gather(self.maintenance_task, *tasks, return_exceptions=True)
-        if self.video:
-            await self.video.http.aclose()
-        if self.comfy:
-            await self.comfy.http.aclose()
+        self.startup_task.cancel()
+        tasks = [state['task'] for state in list(self.active.values())]
+        for state in list(self.active.values()): self.cancel(state)
+        await asyncio.gather(self.maintenance_task, self.startup_task, *tasks, return_exceptions=True)
+        await self.manager.close()
+        if self.quarantined_lease: self.quarantined_lease.release()

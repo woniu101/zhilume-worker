@@ -1,4 +1,57 @@
 {
-  "valid":[{"protocolVersion":"2.0","messageId":"one","type":"hello","payload":{"capabilities":["mock.text.echo.v1"]}},{"protocolVersion":"2.0","messageId":"two","type":"task.progress","jobId":"j","attemptId":"a","leaseId":"l","sequence":1,"payload":{"stage":"processing","progress":0.2}}],
-  "invalid":[{"protocolVersion":"0.0","messageId":"one","type":"hello","payload":{}},{"protocolVersion":"2.0","messageId":"two","type":"task.progress","payload":{}},{"protocolVersion":"2.0","messageId":"three","type":"hello","payload":{},"unexpected":true}]
+  "valid": [
+    {
+      "protocolVersion": "3.0",
+      "messageId": "one",
+      "type": "hello",
+      "payload": {
+        "capabilities": [
+          "mock.text.echo.v1"
+        ],
+        "workerId": "fixture",
+        "executionSpecs": [],
+        "deployment": {
+          "capacity": 1,
+          "resourceIds": [
+            "cpu:fixture"
+          ]
+        },
+        "activeAttempts": []
+      }
+    },
+    {
+      "protocolVersion": "3.0",
+      "messageId": "two",
+      "type": "task.progress",
+      "jobId": "j",
+      "attemptId": "a",
+      "leaseId": "l",
+      "sequence": 1,
+      "payload": {
+        "stage": "processing",
+        "progress": 0.2
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "protocolVersion": "0.0",
+      "messageId": "one",
+      "type": "hello",
+      "payload": {}
+    },
+    {
+      "protocolVersion": "3.0",
+      "messageId": "two",
+      "type": "task.progress",
+      "payload": {}
+    },
+    {
+      "protocolVersion": "3.0",
+      "messageId": "three",
+      "type": "hello",
+      "payload": {},
+      "unexpected": true
+    }
+  ]
 }

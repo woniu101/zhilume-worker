@@ -35,6 +35,16 @@
         "image": 2,
         "video": 1,
         "audio": 1
+      },
+      "identity": {
+        "revision": "minimax-h3-fl2va-release",
+        "quantization": "declare-exact-weight-format",
+        "artifacts": {
+          "diffusion": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "clip": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "vae": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "audioVae": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION"
+        }
       }
     },
     {
@@ -67,6 +77,16 @@
         "image": 2,
         "video": 1,
         "audio": 1
+      },
+      "identity": {
+        "revision": "minimax-h3-ref2va-release",
+        "quantization": "declare-exact-weight-format",
+        "artifacts": {
+          "diffusion": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "clip": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "vae": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "audioVae": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION"
+        }
       }
     }
   ]

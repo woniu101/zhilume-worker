@@ -1,3 +1,4 @@
+from fixture_identity import fixture_config
 import json
 import shutil
 import subprocess
@@ -9,7 +10,9 @@ import httpx
 from zhilume_worker.video_workflows import profiles, build_graph, validate_input
 from zhilume_worker.video import VideoExecutor
 
-CONFIG = dict(url='http://comfy', exclusive=True, profiles=[dict(modelId='minimax-h3-ref2va', models=dict(diffusion='h3.safetensors', clip='clip.safetensors', vae='video.safetensors', audioVae='audio.safetensors'))])
+CONFIG = dict(url='http://comfy', exclusive=True, profiles=[dict(modelId='minimax-h3-ref2va', identity=dict(revision='fixture-v1',quantization='fp32',artifacts={'model':'revision:fixture-v1'}), models=dict(diffusion='h3.safetensors', clip='clip.safetensors', vae='video.safetensors', audioVae='audio.safetensors'))])
+CONFIG=fixture_config(CONFIG)
+
 def request(p):
     return dict(modelId=p['modelId'],profileId=p['profileId'],workflowRevision=p['workflowRevision'],mode='reference',prompt='Use <Video 1> motion',width=512,height=288,frames=124,steps=20,seed=0,includeAudio=True,references=[dict(role='video',assetId='source',start=0,frames=56)],referenceAssetIds=['source'])
 

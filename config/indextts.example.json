@@ -4,5 +4,12 @@
   "modelDirectory": "/opt/index-tts/checkpoints",
   "ffmpeg": "/usr/bin/ffmpeg",
   "maxTextCharacters": 1000,
-  "enableEmotionText": false
+  "enableEmotionText": false,
+  "identity": {
+    "revision": "indextts2.5-release",
+    "quantization": "declare-exact-weight-format",
+    "artifacts": {
+      "tts": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION"
+    }
+  }
 }

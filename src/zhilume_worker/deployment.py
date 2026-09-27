@@ -26,7 +26,7 @@ async def check_services(worker, config, transport=None, credential=None):
                 response = await client.get(worker.rstrip("/") + "/api/v1/system", headers={"Authorization": "Bearer " + (credential or "")})
                 response.raise_for_status()
                 value = response.json()
-                if value.get("name") != "Zhilume Worker" or value.get("protocolVersion") != "2.0":
+                if value.get("name") != "Zhilume Worker" or value.get("protocolVersion") != "3.0":
                     raise ValueError("Worker 协议不匹配")
                 result["workerReachable"] = True
             except Exception as error:

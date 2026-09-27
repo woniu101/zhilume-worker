@@ -5,8 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-from zhilume_worker.speech import SpeechExecutor, public_profile, validate_input, MODEL
+from zhilume_worker.speech import SpeechExecutor, public_profile as raw_public_profile, validate_input, MODEL
 from zhilume_worker.speech_runner import infer_kwargs
+
+IDENTITY = {'revision':'fixture-v1','quantization':'fp32','artifacts':{'tts':'revision:fixture-v1'}}
+def public_profile(config): return raw_public_profile({**config, 'identity': IDENTITY})
 
 
 def request(profile):
@@ -37,7 +40,7 @@ class SpeechTest(unittest.IsolatedAsyncioTestCase):
             validate_input({**value, 'referenceAssetIds': ['emotion', 'voice']}, profile)
 
     async def test_preflight_never_advertises_missing_models(self):
-        executor = SpeechExecutor({})
+        executor = SpeechExecutor({"identity": IDENTITY, })
         self.assertEqual(executor.public_profiles, [])
         with self.assertRaises(ValueError):
             await executor.check()
@@ -55,7 +58,7 @@ class SpeechTest(unittest.IsolatedAsyncioTestCase):
             for name in files:
                 p = root / name; p.parent.mkdir(parents=True, exist_ok=True); p.write_text('fixture')
             config = dict(python=sys.executable, ffmpeg=sys.executable, repository=str(root), modelDirectory=str(root), enableEmotionText=True)
-            executor = SpeechExecutor(config)
+            executor = SpeechExecutor({**config, "identity": IDENTITY})
             with patch('subprocess.check_output', return_value=MODEL['upstreamRevision'].encode()):
                 with self.assertRaisesRegex(ValueError, 'chat_template.jinja'):
                     await executor.check()
@@ -71,7 +74,7 @@ class SpeechTest(unittest.IsolatedAsyncioTestCase):
     async def test_cancel_reaps_owned_child_before_returning(self):
         with tempfile.TemporaryDirectory() as root:
             folder = Path(root)
-            executor = SpeechExecutor({})
+            executor = SpeechExecutor({"identity": IDENTITY, })
             spawned = []
             create = asyncio.create_subprocess_exec
             async def capture(*args, **kwargs):

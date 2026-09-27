@@ -11,7 +11,16 @@
         "vae": "qwen_image_vae.safetensors"
       },
       "maxSize": 1536,
-      "defaultSteps": 50
+      "defaultSteps": 50,
+      "identity": {
+        "revision": "qwen-image-2512-release",
+        "quantization": "declare-exact-weight-format",
+        "artifacts": {
+          "diffusion": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "clip": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "vae": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION"
+        }
+      }
     },
     {
       "modelId": "qwen-image-2.1",
@@ -23,7 +32,16 @@
       "maxReferences": 4,
       "maxSize": 1536,
       "referenceResolution": 1024,
-      "defaultSteps": 25
+      "defaultSteps": 25,
+      "identity": {
+        "revision": "qwen-image-2.1-release",
+        "quantization": "declare-exact-weight-format",
+        "artifacts": {
+          "diffusion": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "clip": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION",
+          "vae": "revision:REPLACE_WITH_PINNED_COMPONENT_REVISION"
+        }
+      }
     }
   ]
 }

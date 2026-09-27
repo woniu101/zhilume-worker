@@ -1,6 +1,6 @@
 # Zhilume Worker
 
-Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.8.0，配套 Studio 0.12.0 / Server 0.9.0，协议 2.0。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
+Python + asyncio + FastAPI/Uvicorn 执行服务。当前 0.9.0，配套 Studio 0.13.0 / Server 0.10.0，协议 3.0。新增独立鉴权的 React 管理页、可移植模型规格及共享 GPU 资源锁。部署以 [管理部署说明](deploy/management.md) 为准。提供模拟执行和显式启用的 Qwen Image 2512 / 2.1 ComfyUI 执行器。2026-09-26 已在上海二 A 的 RTX 5090 完成真实文生图、编辑、2/4 图参考、RGBA、取消及 Server 重连验收，见 [部署说明](deploy/README.md)。
 
 ## 启动与接入
 
@@ -16,7 +16,7 @@ uv run zhilume-worker --host 127.0.0.1 --port 4320 --state .state --name my-work
 
 默认仅监听本机；如通过受保护的网络入口访问，可指定适当的监听地址。公网访问应使用 HTTPS/WSS。地址的可达性由用户解决，本项目不实现 SSH 隧道、组网、中继，不提供外部工具配置示例或下载入口。
 
-`--state` 保存 workerId、接入密钥、Server 绑定和任务尝试目录。首次连接绑定一个 Server 身份；其他 Server 被拒绝。连接不同 Server 应停下当前 Worker，并使用独立的新状态目录启动，不复制已有身份文件。Server 也须保留数据目录内的 worker-connections.json，确保重启身份不变。不要把任何身份、密钥或用户素材放入镜像或 Git。
+`--state` 保存 workerId、接入密钥、Server 绑定和任务尝试目录。首次连接绑定一个 Server 身份；其他 Server 被拒绝。切换 Server 时在部署管理页显式解除绑定或轮换接入凭证；任务执行期间禁止该操作。Server 也须保留数据目录内的 worker-connections.json，确保重启身份不变。不要把任何身份、密钥或用户素材放入镜像或 Git。
 
 ## 执行与恢复
 
@@ -30,7 +30,10 @@ uv run zhilume-worker --host 127.0.0.1 --port 4320 --state .state --name my-work
 ## 校验与打包
 
 ```bash
-uv run python -m unittest discover -s tests -v
+uv run --extra image python -m unittest discover -s tests -v
+# 仅开发/发布机器需要 Node.js
+npm --prefix admin ci
+npm --prefix admin run build
 uv build
 ```
 

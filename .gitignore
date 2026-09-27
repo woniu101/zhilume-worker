@@ -7,3 +7,6 @@ __pycache__/
 dist/
 
 config/*.local.json
+
+admin/node_modules/
+src/zhilume_worker/web/

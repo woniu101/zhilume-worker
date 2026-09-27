@@ -4,11 +4,11 @@ import os
 import signal
 import subprocess
 
-async def run_child(command, cwd, log, timeout=900):
+async def run_child(command, cwd, log, timeout=900, env=None):
     # No shell and no renderer-controlled command. Kill the owned process before acknowledging cancellation.
     with log.open('ab') as stream:
         process = await asyncio.create_subprocess_exec(*command, cwd=cwd, stdout=stream, stderr=stream,
-            env={**os.environ, 'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1'},
+            env={**os.environ, 'HF_HUB_OFFLINE': '1', 'TRANSFORMERS_OFFLINE': '1', **(env or {})},
             start_new_session=os.name != 'nt', creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         try:
             code = await asyncio.wait_for(process.wait(), timeout)

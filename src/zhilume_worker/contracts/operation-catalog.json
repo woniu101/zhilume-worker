@@ -1,5 +1,5 @@
 {
-  "version": "1.6.0",
+  "version": "1.7.0",
   "media": [
     {
       "id": "media.video.trim.v1",
@@ -327,6 +327,26 @@
         "MiniMaxH3ReferenceToVideo"
       ],
       "status": "awaiting_gpu_validation"
+    }
+  ],
+  "languageOperations": [
+    {
+      "id": "text.generate.v1",
+      "name": "文本生成",
+      "executor": "api",
+      "inputKinds": [
+        "text",
+        "image"
+      ]
+    },
+    {
+      "id": "prompt.optimize.v1",
+      "name": "提示词优化",
+      "executor": "api",
+      "inputKinds": [
+        "text",
+        "image"
+      ]
     }
   ]
 }

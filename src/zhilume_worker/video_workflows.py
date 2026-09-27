@@ -1,3 +1,4 @@
+from .specification import sign
 """Pinned ComfyUI H3 graphs. References keep explicit roles and frame lengths."""
 import hashlib
 import json
@@ -35,7 +36,8 @@ def profiles(config):
             raise ValueError('视频步数应为 1–50')
         public = dict(modelId=model['id'], workflowRevision=model['workflowRevision'], modes=model['modes'], sizes=sizes,
                       frames=frames, fps=24, referenceLimits=refs, defaultSteps=steps, maxSteps=50, validation='unverified')
-        public['profileId'] = hashlib.sha256(json.dumps({'public': public, 'models': files}, sort_keys=True).encode()).hexdigest()
+        if set(entry.get('identity', {}).get('artifacts', {})) != set(files): raise ValueError('执行规格必须标识所有权重组件')
+        sign(public, entry.get('identity'))
         if any(p['public']['profileId'] == public['profileId'] for p in result):
             raise ValueError('视频配置重复')
         result.append({'public': public, 'models': files})
